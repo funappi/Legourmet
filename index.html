@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Gourmet - Laboratoire d'Alchimie Culinaire</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="tools-panel glass">
+            <header>
+                <h1>Le Gourmet</h1>
+                <p class="tagline">Laboratoire IA & Créateur de Saveurs</p>
+                <div class="controls-panel-top">
+                    <button id="mode-toggle" class="control-btn">Mode Avancé ⚙️</button>
+                </div>
+            </header>
+
+            <div id="simple-mode" class="active-mode section">
+                <h2>Envie du moment</h2>
+                <textarea id="simple-prompt-input" placeholder="Décrivez votre plat de rêve (ex: un bowl chaud d'inspiration asiatique et épicée)..."></textarea>
+            </div>
+
+            <div id="advanced-mode" class="hidden-mode">
+                <div class="control-group section">
+                    <div class="group-header">
+                        <h2>Saisie Tri-Entrée (Bases de Recette)</h2>
+                        <label class="switch"><input type="checkbox" id="t-slots" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="group-content" id="c-slots">
+                        <div class="smart-input-container">
+                            <input type="text" class="ingredient-autocomplete-input" data-category="base" placeholder="Ajouter un Féculent/Céréale pivot...">
+                            <div class="tags-output-zone" id="tags-base-container"></div>
+                        </div>
+                        <div class="smart-input-container">
+                            <input type="text" class="ingredient-autocomplete-input" data-category="protein" placeholder="Ajouter une Viande/Protéine pivot...">
+                            <div class="tags-output-zone" id="tags-protein-container"></div>
+                        </div>
+                        <div class="smart-input-container">
+                            <input type="text" class="ingredient-autocomplete-input" data-category="vegetable" placeholder="Ajouter un Légume pivot...">
+                            <div class="tags-output-zone" id="tags-vegetable-container"></div>
+                        </div>
+                        <ul id="autocomplete-list" class="hidden-mode"></ul>
+                    </div>
+                </div>
+
+                <div class="control-group section">
+                    <div class="group-header">
+                        <h2>Reste du réfrigérateur (Anti-Gaspi)</h2>
+                        <label class="switch"><input type="checkbox" id="t-ing" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="group-content" id="c-ing">
+                        <input type="text" class="ingredient-autocomplete-input" data-category="anti-gaspi" placeholder="Ajouter vos restes génériques (ex: ail, crème, oignon)...">
+                        <div class="tags-output-zone" id="tags-antigaspi-container"></div>
+                    </div>
+                </div>
+
+                <div class="control-group section">
+                    <div class="group-header">
+                        <h2>Cuisine Fusion</h2>
+                        <label class="switch"><input type="checkbox" id="t-fusion" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="group-content" id="c-fusion">
+                        <input type="text" id="fusion-input" placeholder="Ex: Japon, Mexique, Italie">
+                    </div>
+                </div>
+
+                <div class="control-group section">
+                    <div class="group-header">
+                        <h2>Équipement disponible</h2>
+                        <label class="switch"><input type="checkbox" id="t-equip" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="group-content equipment-grid" id="c-equip">
+                        <div class="equip-card" data-equip="Four">Four</div>
+                        <div class="equip-card" data-equip="Micro-onde">Micro-onde</div>
+                        <div class="equip-card" data-equip="Airfryer">Airfryer</div>
+                        <div class="equip-card" data-equip="Plaques">Plaques de cuisson</div>
+                    </div>
+                </div>
+
+                <div class="control-group section">
+                    <div class="group-header">
+                        <h2>Paramètres de création</h2>
+                        <label class="switch"><input type="checkbox" id="t-sliders" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="group-content" id="c-sliders">
+                        <div class="slider-container">
+                            <div class="slider-label"><span>Audace Culinaire</span><span id="risk-val" class="badge-val">Original</span></div>
+                            <input type="range" id="slider-risk" min="1" max="3" value="2" step="1">
+                            <div class="ticks"><span>Classique</span><span>Original</span><span>Aventure</span></div>
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-label"><span>Temps & Complexité</span><span id="time-val" class="badge-val">Amateur</span></div>
+                            <input type="range" id="slider-time" min="1" max="3" value="2" step="1">
+                            <div class="ticks"><span>Fast Food</span><span>Amateur</span><span>Michelin</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-group section">
+                    <div class="group-header">
+                        <h2>Profil Aromatique</h2>
+                        <label class="switch"><input type="checkbox" id="t-flavor" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="group-content" id="c-flavor">
+                        <div class="chromatic-container">
+                            <div class="chromatic-wheel" id="flavorWheel">
+                                <div class="wheel-center"></div>
+                                <div class="chromatic-cursor" id="flavorCursor"></div>
+                            </div>
+                            <div class="chromatic-labels">
+                                <span class="label l-acide">HERBACÉ</span>
+                                <span class="label l-sale">ÉPICÉ</span>
+                                <span class="label l-sucre">SUCRÉ</span>
+                                <span class="label l-amer">UMAMI</span>
+                            </div>
+                        </div>
+                        <p class="flavor-output">Équilibre ciblé : <span id="flavor-result">Équilibré (Umami)</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="aside-footer">
+                <button id="theme-toggle" class="theme-btn">🌓 Alterner le Thème</button>
+                <button id="btn-generate" class="btn-primary">Cuisiner 🚀</button>
+            </footer>
+        </aside>
+
+        <main class="result-panel glass">
+            <div class="variation-tabs" id="variationTabsZone" style="display: none;">
+                <button class="var-tab active-variant" data-variant="original">✨ Original</button>
+                <button class="var-tab" data-variant="healthy">🌿 Healthy</button>
+                <button class="var-tab" data-variant="protein">💪 Protéiné</button>
+                <button class="var-tab" data-variant="gourmand">🧀 Gourmand / Fat</button>
+            </div>
+
+            <div class="plate-wrapper" id="interactivePlateWrapper">
+                <div id="glow-original" class="plate-glow glow-original active"></div>
+                <div id="glow-healthy" class="plate-glow glow-healthy"></div>
+                <div id="glow-protein" class="plate-glow glow-protein"></div>
+                <div id="glow-gourmand" class="plate-glow glow-gourmand"></div>
+                
+                <div class="plate" id="mainPlate">
+                    <div class="plate-texture" id="plateImage"></div>
+                </div>
+            </div>
+
+            <div class="mrcook-layout" id="recipeCard">
+                <div class="recipe-top-header">
+                    <h2 id="recipeTitle">Laboratoire en attente</h2>
+                    
+                    <div class="mrcook-time-row">
+                        <div class="time-box"><span>⏱ Prép.</span><strong id="p-time">-- min</strong></div>
+                        <div class="time-box"><span>🔥 Cuisson</span><strong id="c-time">-- min</strong></div>
+                        <div class="time-box total-time-box"><span>⌛ TOTAL</span><strong id="t-time">-- min</strong></div>
+                    </div>
+
+                    <div class="meta-badges" id="recipeBadges">
+                        <div class="badge nova" id="r-nova">NOVA --</div>
+                        <div class="badge macro-pro">Prot: <span id="r-pro">--g</span></div>
+                        <div class="badge macro-lip">Lip: <span id="r-lip">--g</span></div>
+                        <div class="badge macro-glu">Gluc: <span id="r-glu">--g</span></div>
+                    </div>
+                </div>
+
+                <div class="recipe-split-columns">
+                    <div class="mrcook-left-column">
+                        <h3>Ingrédients <small>(cliquez pour barrer)</small></h3>
+                        <div class="portions-widget">
+                            <button id="btn-minus">-</button>
+                            <span id="portion-display">1</span> pers.
+                            <button id="btn-plus">+</button>
+                        </div>
+                        <ul id="ingredientsList" class="ingredients-checklist">
+                            <li>Sélectionnez vos directives moléculaires à gauche, puis activez la cinétique de cuisson.</li>
+                        </ul>
+                    </div>
+
+                    <div class="mrcook-right-column">
+                        <h3>Préparation <small>(cliquez pour barrer)</small></h3>
+                        <div id="stepsList" class="steps-ordered-list">
+                            <p>En attente du chef IA.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loading-display" class="hidden-mode loader-container">
+                <h2>Alchimie Culinaire en Cours...</h2>
+                <div class="spinner"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/inventory.js"></script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
