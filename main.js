@@ -1,5 +1,4 @@
 // main.js
-
 window.activeRecipePack = null;
 window.currentSelectedVariant = "original";
 window.currentPortions = 1;
@@ -26,7 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
             simpleMode.classList.toggle("hidden-mode", isAdvanced);
             advancedMode.classList.toggle("hidden-mode", !isAdvanced);
             modeBtn.innerText = isAdvanced ? "Mode Simple 📝" : "Mode Avancé ⚙️";
-            
             document.getElementById("autocomplete-list")?.classList.add("hidden-mode");
         });
     }
@@ -73,11 +71,53 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('time-val').innerText = timeLevels[e.target.value];
     });
 
-    // --- 5. ÉCOUTEURS D'ONGLETS VARIATIONS ---
+    // --- 5. INTERACTION DE LA ROUE DES SAVEURS ---
+    const wheel = document.getElementById('flavorWheel');
+    const cursor = document.getElementById('flavorCursor');
+    const resultText = document.getElementById('flavor-result');
+
+    if (wheel && cursor && resultText) {
+        wheel.addEventListener('mousemove', (e) => {
+            if (document.getElementById('t-flavor') && !document.getElementById('t-flavor').checked) return;
+
+            const rect = wheel.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            cursor.style.left = `${x}px`;
+            cursor.style.top = `${y}px`;
+
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const angle = Math.atan2(y - centerY, x - centerX) * (180 / Math.PI) + 180;
+
+            if (angle >= 270 && angle < 360) { 
+                resultText.innerText = "Frais & Herbacé"; 
+                resultText.style.color = "var(--healthy-color)"; 
+            } else if (angle >= 0 && angle < 90) { 
+                resultText.innerText = "Épicé & Chaud"; 
+                resultText.style.color = "var(--fat-color)"; 
+            } else if (angle >= 90 && angle < 180) { 
+                resultText.innerText = "Sucré & Acidulé"; 
+                resultText.style.color = "var(--accent)"; 
+            } else if (angle >= 180 && angle < 270) { 
+                resultText.innerText = "Intense & Umami"; 
+                resultText.style.color = "var(--protein-color)"; 
+            }
+        });
+
+        wheel.addEventListener('mouseleave', () => {
+            cursor.style.left = '50%'; cursor.style.top = '50%';
+            if (document.getElementById('t-flavor') && document.getElementById('t-flavor').checked) {
+                resultText.innerText = "Équilibré (Umami)"; resultText.style.color = "var(--text-light)";
+            }
+        });
+    }
+
+    // --- 6. ÉCOUTEURS D'ONGLETS VARIATIONS ---
     document.querySelectorAll(".var-tab").forEach(tab => {
         tab.addEventListener("click", () => {
             if (!window.activeRecipePack) return;
-            
             document.querySelectorAll(".var-tab").forEach(t => t.classList.remove("active-variant"));
             tab.classList.add("active-variant");
             
@@ -87,7 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 6. CAPTEURS TACTILES (SWIPES) SUR L'ASSIETTE CENTRALE ---
+    // --- 7. CAPTEURS TACTILES (SWIPES) SUR L'ASSIETTE CENTRALE ---
     let touchStartX = 0, touchStartY = 0;
     const plate = document.getElementById('mainPlate');
 
@@ -116,7 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }, { passive: true });
     }
 
-    // --- 7. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
+    // --- 8. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
     document.getElementById("btn-plus")?.addEventListener("click", () => {
         window.currentPortions++;
         document.getElementById("portion-display").innerText = window.currentPortions;
@@ -130,7 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // --- 8. AGGRÉGATION DU PAYLOAD COMPLET (RÈGLE D'OR AUTO_FOODPAIRING) ---
+    // --- 9. AGGRÉGATION DU PAYLOAD COMPLET ---
     const btnGenerate = document.getElementById("btn-generate");
     if (btnGenerate) {
         btnGenerate.addEventListener("click", async () => {
@@ -181,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.querySelector('[data-variant="original"]').click();
 
             } catch (err) {
-                print(err);
+                console.error(err);
                 document.getElementById("recipeTitle").innerText = "Surcharge Moléculaire";
                 const recipeDesc = document.getElementById("recipeDesc");
                 if (recipeDesc) {
@@ -197,7 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// --- 9. LE MOTEUR DE RENDU INTERACTIF DOUBLE COLONNE MR. COOK ---
+// --- 10. LE MOTEUR DE RENDU INTERACTIF DOUBLE COLONNE MR. COOK ---
 window.renderSelectedVariant = function(variantKey) {
     const data = window.activeRecipePack[variantKey];
     if (!data) return;
@@ -223,6 +263,18 @@ window.renderSelectedVariant = function(variantKey) {
         document.getElementById("r-lip").innerText = data.macros.lipides || "--";
         document.getElementById("r-glu").innerText = data.macros.glucides || "--";
     }
+
+    // AJOUT DYNAMIQUE : Affichage des 3 infos demandées (Matériel, Risque, Difficulté)
+    const hardware = [];
+    document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.innerText.trim()));
+    const activeEquip = hardware.length > 0 ? hardware.join(', ') : "Classique";
+    const activeRisk = document.getElementById('risk-val')?.innerText || "Original";
+    const activeTime = document.getElementById('time-val')?.innerText || "Amateur";
+
+    // Injection sécurisée dans la zone des badges (Si les conteneurs existent dans le HTML)
+    if(document.getElementById("r-equip")) document.getElementById("r-equip").innerText = `Matériel : ${activeEquip}`;
+    if(document.getElementById("r-risk")) document.getElementById("r-risk").innerText = `Audace : ${activeRisk}`;
+    if(document.getElementById("r-difficulty")) document.getElementById("r-difficulty").innerText = `Niveau : ${activeTime}`;
 
     const ingList = document.getElementById("ingredientsList");
     if (ingList && data.ingredients && Array.isArray(data.ingredients)) {
