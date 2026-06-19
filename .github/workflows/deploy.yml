@@ -1,0 +1,31 @@
+name: Deploy Le Gourmet Premium
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Déploiement sur GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: . # Déploie tout le contenu de la racine (index.html, style.css...)
+          branch: gh-pages
+
+  reload-backend:
+    needs: deploy-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recharger le serveur PythonAnywhere
+        run: |
+          curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/webapps/${{ secrets.PA_DOMAIN }}/reload/ \
+            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}"
