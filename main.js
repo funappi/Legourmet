@@ -4,11 +4,6 @@ window.activeRecipePack = null;
 window.currentSelectedVariant = "original";
 window.currentPortions = 1;
 
-// Stockage sécurisé des configurations pour affichage
-let currentHardware = "Libre";
-let currentComplex = "Amateur";
-let currentRisk = "Original";
-
 document.addEventListener("DOMContentLoaded", () => {
     
     // --- 1. ARCHITECTURE DES COULEURS & MODES ---
@@ -31,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
             simpleMode.classList.toggle("hidden-mode", isAdvanced);
             advancedMode.classList.toggle("hidden-mode", !isAdvanced);
             modeBtn.innerText = isAdvanced ? "Mode Simple 📝" : "Mode Avancé ⚙️";
+            
             document.getElementById("autocomplete-list")?.classList.add("hidden-mode");
         });
     }
@@ -71,64 +67,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const timeLevels = { "1": "Fast Food", "2": "Amateur", "3": "Guide Michelin" };
 
     document.getElementById('slider-risk')?.addEventListener('input', (e) => {
-        const riskVal = document.getElementById('risk-val');
-        if (riskVal) riskVal.innerText = riskLevels[e.target.value];
+        document.getElementById('risk-val').innerText = riskLevels[e.target.value];
     });
     document.getElementById('slider-time')?.addEventListener('input', (e) => {
-        const timeVal = document.getElementById('time-val');
-        if (timeVal) timeVal.innerText = timeLevels[e.target.value];
+        document.getElementById('time-val').innerText = timeLevels[e.target.value];
     });
 
-    // --- 5. LOGIQUE INTERACTIVE DE LA ROUE DES SAVEURS ---
-    const wheel = document.getElementById('flavorWheel');
-    const cursor = document.getElementById('flavorCursor');
-    const resultText = document.getElementById('flavor-result');
-
-    if (wheel && cursor && resultText) {
-        wheel.addEventListener('click', (e) => {
-            if (document.getElementById('t-flavor') && !document.getElementById('t-flavor').checked) return;
-
-            const rect = wheel.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            cursor.style.left = `${x}px`;
-            cursor.style.top = `${y}px`;
-
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            
-            const dx = x - centerX;
-            const dy = y - centerY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance < 24) {
-                resultText.innerText = "Intense & Umami";
-                resultText.style.color = "var(--umami-color)";
-                cursor.style.left = "50%";
-                cursor.style.top = "50%";
-                return;
-            }
-
-            const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 180;
-
-            if (angle >= 270 && angle < 360) {
-                resultText.innerText = "Frais & Herbacé";
-                resultText.style.color = "var(--healthy-color)";
-            } else if (angle >= 0 && angle < 90) {
-                resultText.innerText = "Épicé & Chaud";
-                resultText.style.color = "var(--fat-color)";
-            } else if (angle >= 90 && angle < 180) {
-                resultText.innerText = "Sucré & Acidulé";
-                resultText.style.color = "var(--accent)";
-            } else if (angle >= 180 && angle < 270) {
-                resultText.innerText = "Amer & Subtil";
-                resultText.style.color = "var(--protein-color)";
-            }
-        });
-    }
-
-    // --- 6. ÉCOUTEURS D'ONGLETS VARIATIONS ---
+    // --- 5. ÉCOUTEURS D'ONGLETS VARIATIONS ---
     document.querySelectorAll(".var-tab").forEach(tab => {
         tab.addEventListener("click", () => {
             if (!window.activeRecipePack) return;
@@ -142,75 +87,58 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // --- 6. CAPTEURS TACTILES (SWIPES) SUR L'ASSIETTE CENTRALE ---
+    let touchStartX = 0, touchStartY = 0;
+    const plate = document.getElementById('mainPlate');
+
+    if (plate) {
+        plate.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        plate.addEventListener('touchend', (e) => {
+            const diffX = e.changedTouches[0].screenX - touchStartX;
+            const diffY = e.changedTouches[0].screenY - touchStartY;
+            const threshold = 50;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (Math.abs(diffX) > threshold) {
+                    if (diffX > 0) document.querySelector('[data-variant="protein"]')?.click();
+                    else document.querySelector('[data-variant="gourmand"]')?.click();
+                }
+            } else {
+                if (Math.abs(diffY) > threshold) {
+                    if (diffY > 0) document.querySelector('[data-variant="healthy"]')?.click();
+                    else document.querySelector('[data-variant="original"]')?.click();
+                }
+            }
+        }, { passive: true });
+    }
+
     // --- 7. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
     document.getElementById("btn-plus")?.addEventListener("click", () => {
         window.currentPortions++;
-        const portionDisplay = document.getElementById("portion-display");
-        if (portionDisplay) portionDisplay.innerText = window.currentPortions;
+        document.getElementById("portion-display").innerText = window.currentPortions;
         if(window.activeRecipePack) window.renderSelectedVariant(window.currentSelectedVariant);
     });
     document.getElementById("btn-minus")?.addEventListener("click", () => {
         if (window.currentPortions > 1) {
             window.currentPortions--;
-            const portionDisplay = document.getElementById("portion-display");
-            if (portionDisplay) portionDisplay.innerText = window.currentPortions;
+            document.getElementById("portion-display").innerText = window.currentPortions;
             if(window.activeRecipePack) window.renderSelectedVariant(window.currentSelectedVariant);
         }
     });
 
-    // --- 8. INTERACTION EXPORT NOTES ---
-    const btnCopyNotes = document.getElementById("btn-copy-notes");
-    if (btnCopyNotes) {
-        btnCopyNotes.addEventListener("click", () => {
-            if (!window.activeRecipePack) return;
-            const data = window.activeRecipePack[window.currentSelectedVariant];
-            if (!data) return;
-
-            let textOutput = `📝 LE GOURMET RECETTE : ${data.title.toUpperCase()}\n`;
-            textOutput += `⏱ Préparation : ${data.prep_time} min | Cuisson : ${data.cook_time} min\n`;
-            textOutput += `🧮 Portion(s) : ${window.currentPortions}\n\n🛒 INGRÉDIENTS :\n`;
-
-            data.ingredients.forEach(ing => {
-                const qty = (parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '');
-                textOutput += `- ${qty} ${ing.unit} ${ing.name}\n`;
-            });
-
-            textOutput += `\n🍳 PRÉPARATION :\n`;
-            if (Array.isArray(data.steps)) {
-                data.steps.forEach((step, idx) => {
-                    textOutput += `${idx + 1}. ${step}\n`;
-                });
-            } else {
-                textOutput += `${data.steps}\n`;
-            }
-
-            navigator.clipboard.writeText(textOutput).then(() => {
-                const oldText = btnCopyNotes.innerText;
-                btnCopyNotes.innerText = "Copié dans vos notes ! ✓";
-                btnCopyNotes.style.borderColor = "var(--healthy-color)";
-                setTimeout(() => {
-                    btnCopyNotes.innerText = oldText;
-                    btnCopyNotes.style.borderColor = "var(--border-glass)";
-                }, 2000);
-            }).catch(err => console.error("Erreur d'exportation de notes :", err));
-        });
-    }
-
-    // --- 9. AGGRÉGATION DU PAYLOAD COMPLET ---
+    // --- 8. AGGRÉGATION DU PAYLOAD COMPLET (RÈGLE D'OR AUTO_FOODPAIRING) ---
     const btnGenerate = document.getElementById("btn-generate");
     if (btnGenerate) {
         btnGenerate.addEventListener("click", async () => {
             btnGenerate.disabled = true;
             btnGenerate.innerText = "Alchimie en cours...";
-            
-            const recipeCard = document.getElementById("recipeCard");
-            if (recipeCard) recipeCard.classList.remove("show");
-            
-            const variationTabsZone = document.getElementById("variationTabsZone");
-            if (variationTabsZone) variationTabsZone.style.display = "none";
-            
-            const loadingDisplay = document.getElementById("loading-display");
-            if (loadingDisplay) loadingDisplay.classList.remove("hidden-mode");
+            document.getElementById("recipeCard").classList.remove("show");
+            document.getElementById("variationTabsZone").style.display = "none";
+            document.getElementById("loading-display").classList.remove("hidden-mode");
 
             const hardware = [];
             document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
@@ -225,23 +153,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
             }
 
-            const riskVal = document.getElementById('risk-val');
-            const timeVal = document.getElementById('time-val');
-            const flavorResult = document.getElementById('flavor-result');
-
-            currentHardware = document.getElementById('t-equip')?.checked && hardware.length > 0 ? hardware.join(', ') : "Libre";
-            currentComplex = document.getElementById('t-sliders')?.checked && timeVal ? timeVal.innerText : "Amateur";
-            currentRisk = document.getElementById('t-sliders')?.checked && riskVal ? riskVal.innerText : "Original";
-
             const payload = {
                 mode: isAdvanced ? "Avancé" : "Simple",
                 simple_prompt: !isAdvanced ? (document.getElementById("simple-prompt-input")?.value || "Repas surprise du chef") : "Auto_FoodPairing",
                 ingredients: isAdvanced ? (ingredientsPack.length > 0 ? ingredientsPack : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
                 fusion: isAdvanced ? (document.getElementById("t-fusion").checked ? (document.getElementById("fusion-input")?.value || "Auto_FoodPairing") : "Auto_FoodPairing") : "Auto_FoodPairing",
                 equipment: isAdvanced ? (document.getElementById("t-equip").checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
-                risk: isAdvanced ? (document.getElementById("t-sliders").checked && riskVal ? riskVal.innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
-                time: isAdvanced ? (document.getElementById("t-sliders").checked && timeVal ? timeVal.innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
-                flavor: isAdvanced ? (document.getElementById("t-flavor").checked && flavorResult ? flavorResult.innerText : "Auto_FoodPairing") : "Auto_FoodPairing"
+                risk: isAdvanced ? (document.getElementById("t-sliders").checked ? document.getElementById("risk-val").innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
+                time: isAdvanced ? (document.getElementById("t-sliders").checked ? document.getElementById("time-val").innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
+                flavor: isAdvanced ? (document.getElementById("t-flavor").checked ? document.getElementById("flavor-result").innerText : "Auto_FoodPairing") : "Auto_FoodPairing"
             };
 
             try {
@@ -255,32 +175,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 window.activeRecipePack = await response.json();
                 window.currentPortions = 1;
+                document.getElementById("portion-display").innerText = "1";
                 
-                const portionDisplay = document.getElementById("portion-display");
-                if (portionDisplay) portionDisplay.innerText = "1";
-                
-                if (variationTabsZone) variationTabsZone.style.display = "flex";
-                
-                const origTab = document.querySelector('[data-variant="original"]');
-                if (origTab) origTab.click();
+                document.getElementById("variationTabsZone").style.display = "flex";
+                document.querySelector('[data-variant="original"]').click();
 
             } catch (err) {
-                console.error(err);
-                const recipeTitle = document.getElementById("recipeTitle");
-                if (recipeTitle) recipeTitle.innerText = "Surcharge Moléculaire";
-                const stepsList = document.getElementById("stepsList");
-                if (stepsList) stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande.</p>";
-                if (recipeCard) recipeCard.classList.add("show");
+                print(err);
+                document.getElementById("recipeTitle").innerText = "Surcharge Moléculaire";
+                const recipeDesc = document.getElementById("recipeDesc");
+                if (recipeDesc) {
+                    recipeDesc.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande.</p>";
+                }
+                document.getElementById("recipeCard").classList.add("show");
             } finally {
                 btnGenerate.disabled = false;
                 btnGenerate.innerText = "Cuisiner 🚀";
-                if (loadingDisplay) loadingDisplay.classList.add("hidden-mode");
+                document.getElementById("loading-display").classList.add("hidden-mode");
             }
         });
     }
 });
 
-// --- 10. LE MOTEUR DE RENDU INTERACTIF DOUBLE COLONNE MR. COOK ---
+// --- 9. LE MOTEUR DE RENDU INTERACTIF DOUBLE COLONNE MR. COOK ---
 window.renderSelectedVariant = function(variantKey) {
     const data = window.activeRecipePack[variantKey];
     if (!data) return;
@@ -295,50 +212,30 @@ window.renderSelectedVariant = function(variantKey) {
         plateImg.style.backgroundImage = `url('https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${keywords}?width=400&height=400&nologo=true')`;
     }
 
-    const rTitle = document.getElementById("recipeTitle");
-    if (rTitle) rTitle.innerText = data.title || "Titre inconnu";
-    
-    const pTime = document.getElementById("p-time");
-    if (pTime) pTime.innerText = data.prep_time ? `${data.prep_time} min` : "--";
-    
-    const cTime = document.getElementById("c-time");
-    if (cTime) cTime.innerText = data.cook_time ? `${data.cook_time} min` : "--";
-    
-    const tTime = document.getElementById("t-time");
-    if (tTime) tTime.innerText = data.total_time ? `${data.total_time} min` : "--";
-    
-    // Rendu sécurisé des Context Pills Optionnels
-    const rEquip = document.getElementById("r-equip");
-    if (rEquip) rEquip.innerText = currentHardware;
-    
-    const rComplex = document.getElementById("r-complex") || document.getElementById("r-complex");
-    if (rComplex) rComplex.innerText = currentComplex;
-    
-    const rRisk = document.getElementById("r-risk");
-    if (rRisk) rRisk.innerText = currentRisk;
-
-    const rNova = document.getElementById("r-nova");
-    if (rNova) rNova.innerText = `NOVA ${data.nova_score || '?'}`;
+    document.getElementById("recipeTitle").innerText = data.title || "Titre inconnu";
+    document.getElementById("p-time").innerText = data.prep_time ? `${data.prep_time} min` : "--";
+    document.getElementById("c-time").innerText = data.cook_time ? `${data.cook_time} min` : "--";
+    document.getElementById("t-time").innerText = data.total_time ? `${data.total_time} min` : "--";
+    document.getElementById("r-nova").innerText = `NOVA ${data.nova_score || '?'}`;
     
     if (data.macros) {
-        const rPro = document.getElementById("r-pro");
-        if (rPro) rPro.innerText = data.macros.proteines || "--";
-        const rLip = document.getElementById("r-lip");
-        if (rLip) rLip.innerText = data.macros.lipides || "--";
-        const rGlu = document.getElementById("r-glu");
-        if (rGlu) rGlu.innerText = data.macros.glucides || "--";
+        document.getElementById("r-pro").innerText = data.macros.proteines || "--";
+        document.getElementById("r-lip").innerText = data.macros.lipides || "--";
+        document.getElementById("r-glu").innerText = data.macros.glucides || "--";
     }
 
     const ingList = document.getElementById("ingredientsList");
     if (ingList && data.ingredients && Array.isArray(data.ingredients)) {
         ingList.innerHTML = data.ingredients.map(ing => {
             const calculatedQty = (parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '');
-            return `<li><div class="custom-checkbox"></div> <label><strong>${calculatedQty} ${ing.unit}</strong> ${ing.name}</label></li>`;
+            return `<li><input type="checkbox"> <label><strong>${calculatedQty} ${ing.unit}</strong> ${ing.name}</label></li>`;
         }).join('');
 
         ingList.querySelectorAll('li').forEach(li => {
-            li.addEventListener('click', () => {
-                li.classList.toggle('checked-item');
+            li.addEventListener('click', (e) => {
+                const chk = li.querySelector('input');
+                if (e.target !== chk) chk.checked = !chk.checked;
+                li.classList.toggle('checked-item', chk.checked);
             });
         });
     }
@@ -357,6 +254,5 @@ window.renderSelectedVariant = function(variantKey) {
         }
     }
 
-    const recipeCard = document.getElementById("recipeCard");
-    if (recipeCard) recipeCard.classList.add("show");
+    document.getElementById("recipeCard").classList.add("show");
 };
