@@ -18,14 +18,29 @@ jobs:
       - name: Déploiement sur GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: . # Déploie tout le contenu de la racine (index.html, style.css...)
+          folder: .
           branch: gh-pages
 
-  reload-backend:
+  sync-and-reload-backend:
     needs: deploy-frontend
     runs-on: ubuntu-latest
     steps:
-      - name: Recharger le serveur PythonAnywhere
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: 1. Propulser le nouvel app.py sur le cloud
+        run: |
+          curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/files/path/home/${{ secrets.PA_USER }}/app.py \
+            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
+            -F "content=@app.py"
+
+      - name: 2. Propulser la nouvelle base legourmet.db sur le cloud
+        run: |
+          curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/files/path/home/${{ secrets.PA_USER }}/legourmet.db \
+            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
+            -F "content=@legourmet.db"
+
+      - name: 3. Réveiller et recharger le serveur PythonAnywhere
         run: |
           curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/webapps/${{ secrets.PA_DOMAIN }}/reload/ \
             -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}"
