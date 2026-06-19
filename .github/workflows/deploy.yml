@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    # Ce réveil magique se déclenche automatiquement TOUS LES LUNDIS à minuit (UTC)
+    # Se réveille automatiquement TOUS LES LUNDIS à minuit (UTC)
     - cron: '0 0 * * 1'
 
 permissions:
@@ -18,30 +18,18 @@ jobs:
       - name: Récupération du code
         uses: actions/checkout@v4
 
-      - name: 1. Sécurité - Cliquer sur le bouton jaune (Prolonger de 30 jours)
-        run: |
-          curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/webapps/${{ secrets.PA_DOMAIN }}/extend/ \
-            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}"
-
-      - name: 2. Mise à jour - Synchroniser le script app.py
-        run: |
-          curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/files/path/home/${{ secrets.PA_USER }}/app.py \
-            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
-            -F "content=@app.py"
-
-      - name: 3. Mise à jour - Synchroniser la base legourmet.db
-        run: |
-          curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/files/path/home/${{ secrets.PA_USER }}/legourmet.db \
-            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}" \
-            -F "content=@legourmet.db"
-
-      - name: 4. Redémarrage - Recharger le serveur pour appliquer les changements
-        run: |
-          curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/webapps/${{ secrets.PA_DOMAIN }}/reload/ \
-            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}"
-
-      - name: 5. Interface - Déployer le design sur GitHub Pages
+      - name: 1. Interface - Déployer le design sur GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: .
           branch: gh-pages
+
+      - name: 2. Sécurité - Cliquer sur le bouton jaune (Prolonger de 30 jours)
+        run: |
+          curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/webapps/${{ secrets.PA_DOMAIN }}/extend/ \
+            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}"
+
+      - name: 3. Redémarrage - Recharger le serveur PythonAnywhere
+        run: |
+          curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/webapps/${{ secrets.PA_DOMAIN }}/reload/ \
+            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}"
