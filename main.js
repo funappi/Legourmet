@@ -143,7 +143,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const hardware = [];
             document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
 
-            // Centralisation complète de l'ensemble des structures de stockage Set
             let ingredientsPack = [];
             if (document.getElementById('t-slots')?.checked) {
                 ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.base));
@@ -182,9 +181,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.querySelector('[data-variant="original"]').click();
 
             } catch (err) {
-                console.error(err);
+                print(err);
                 document.getElementById("recipeTitle").innerText = "Surcharge Moléculaire";
-                document.getElementById("recipeDesc").innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande.</p>";
+                const recipeDesc = document.getElementById("recipeDesc");
+                if (recipeDesc) {
+                    recipeDesc.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande.</p>";
+                }
                 document.getElementById("recipeCard").classList.add("show");
             } finally {
                 btnGenerate.disabled = false;
@@ -200,19 +202,16 @@ window.renderSelectedVariant = function(variantKey) {
     const data = window.activeRecipePack[variantKey];
     if (!data) return;
 
-    // Synchronisation optique des lueurs d'arrière-plan (Néons)
     document.querySelectorAll('.plate-glow').forEach(g => g.classList.remove('active'));
     const glowTarget = document.getElementById(`glow-${variantKey}`);
     if (glowTarget) glowTarget.classList.add('active');
 
-    // Modification appliquée : Pollinations.ai pour la génération d'images par IA 100% gratuite (Source: pollinations.ai)
     const keywords = data.title.split(' ').slice(0, 4).join('%20');
     const plateImg = document.getElementById("plateImage");
     if(plateImg) {
         plateImg.style.backgroundImage = `url('https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${keywords}?width=400&height=400&nologo=true')`;
     }
 
-    // Métadonnées principales et Badges nutritionnels
     document.getElementById("recipeTitle").innerText = data.title || "Titre inconnu";
     document.getElementById("p-time").innerText = data.prep_time ? `${data.prep_time} min` : "--";
     document.getElementById("c-time").innerText = data.cook_time ? `${data.cook_time} min` : "--";
@@ -225,7 +224,6 @@ window.renderSelectedVariant = function(variantKey) {
         document.getElementById("r-glu").innerText = data.macros.glucides || "--";
     }
 
-    // Rendu + Logique interactive de barrage des Ingrédients (Strike-through)
     const ingList = document.getElementById("ingredientsList");
     if (ingList && data.ingredients && Array.isArray(data.ingredients)) {
         ingList.innerHTML = data.ingredients.map(ing => {
@@ -242,7 +240,6 @@ window.renderSelectedVariant = function(variantKey) {
         });
     }
 
-    // Rendu + Logique interactive de complétion et barrage des Étapes (Opacité réduite)
     const stepsList = document.getElementById("stepsList");
     if (stepsList && data.steps) {
         if (Array.isArray(data.steps)) {
