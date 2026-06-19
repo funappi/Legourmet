@@ -1,7 +1,13 @@
 // main.js
+
 window.activeRecipePack = null;
 window.currentSelectedVariant = "original";
 window.currentPortions = 1;
+
+// Stockage des configurations pour affichage
+let currentHardware = "Libre";
+let currentComplex = "Amateur";
+let currentRisk = "Original";
 
 document.addEventListener("DOMContentLoaded", () => {
     
@@ -71,45 +77,55 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('time-val').innerText = timeLevels[e.target.value];
     });
 
-    // --- 5. INTERACTION DE LA ROUE DES SAVEURS ---
+    // --- 5. 🌟 LOGIQUE INTERACTIVE DE LA ROUE DES SAVEURS (CLIC SECU 4 DIRECTIONS + UMAMI) ---
     const wheel = document.getElementById('flavorWheel');
     const cursor = document.getElementById('flavorCursor');
     const resultText = document.getElementById('flavor-result');
 
     if (wheel && cursor && resultText) {
-        wheel.addEventListener('mousemove', (e) => {
+        wheel.addEventListener('click', (e) => {
             if (document.getElementById('t-flavor') && !document.getElementById('t-flavor').checked) return;
 
             const rect = wheel.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
+            // Calcul du positionnement graphique exact
             cursor.style.left = `${x}px`;
             cursor.style.top = `${y}px`;
 
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
-            const angle = Math.atan2(y - centerY, x - centerX) * (180 / Math.PI) + 180;
+            
+            // Calcul de la distance géométrique par rapport au centre (Umami)
+            const dx = x - centerX;
+            const dy = y - centerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
-            if (angle >= 270 && angle < 360) { 
-                resultText.innerText = "Frais & Herbacé"; 
-                resultText.style.color = "var(--healthy-color)"; 
-            } else if (angle >= 0 && angle < 90) { 
-                resultText.innerText = "Épicé & Chaud"; 
-                resultText.style.color = "var(--fat-color)"; 
-            } else if (angle >= 90 && angle < 180) { 
-                resultText.innerText = "Sucré & Acidulé"; 
-                resultText.style.color = "var(--accent)"; 
-            } else if (angle >= 180 && angle < 270) { 
-                resultText.innerText = "Intense & Umami"; 
-                resultText.style.color = "var(--protein-color)"; 
+            // Si le clic est dans le rond central (Umami)
+            if (distance < 24) {
+                resultText.innerText = "Intense & Umami";
+                resultText.style.color = "var(--umami-color)";
+                cursor.style.left = "50%";
+                cursor.style.top = "50%";
+                return;
             }
-        });
 
-        wheel.addEventListener('mouseleave', () => {
-            cursor.style.left = '50%'; cursor.style.top = '50%';
-            if (document.getElementById('t-flavor') && document.getElementById('t-flavor').checked) {
-                resultText.innerText = "Équilibré (Umami)"; resultText.style.color = "var(--text-light)";
+            // Sinon, détection angulaire sur 4 directions strictes (90° par quadrant)
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 180;
+
+            if (angle >= 270 && angle < 360) {
+                resultText.innerText = "Frais & Herbacé";
+                resultText.style.color = "var(--healthy-color)";
+            } else if (angle >= 0 && angle < 90) {
+                resultText.innerText = "Épicé & Chaud";
+                resultText.style.color = "var(--fat-color)";
+            } else if (angle >= 90 && angle < 180) {
+                resultText.innerText = "Sucré & Acidulé";
+                resultText.style.color = "var(--accent)";
+            } else if (angle >= 180 && angle < 270) {
+                resultText.innerText = "Amer & Subtil";
+                resultText.style.color = "var(--protein-color)";
             }
         });
     }
@@ -118,6 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".var-tab").forEach(tab => {
         tab.addEventListener("click", () => {
             if (!window.activeRecipePack) return;
+            
             document.querySelectorAll(".var-tab").forEach(t => t.classList.remove("active-variant"));
             tab.classList.add("active-variant");
             
@@ -127,36 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 7. CAPTEURS TACTILES (SWIPES) SUR L'ASSIETTE CENTRALE ---
-    let touchStartX = 0, touchStartY = 0;
-    const plate = document.getElementById('mainPlate');
-
-    if (plate) {
-        plate.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, { passive: true });
-
-        plate.addEventListener('touchend', (e) => {
-            const diffX = e.changedTouches[0].screenX - touchStartX;
-            const diffY = e.changedTouches[0].screenY - touchStartY;
-            const threshold = 50;
-
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (Math.abs(diffX) > threshold) {
-                    if (diffX > 0) document.querySelector('[data-variant="protein"]')?.click();
-                    else document.querySelector('[data-variant="gourmand"]')?.click();
-                }
-            } else {
-                if (Math.abs(diffY) > threshold) {
-                    if (diffY > 0) document.querySelector('[data-variant="healthy"]')?.click();
-                    else document.querySelector('[data-variant="original"]')?.click();
-                }
-            }
-        }, { passive: true });
-    }
-
-    // --- 8. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
+    // --- 7. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
     document.getElementById("btn-plus")?.addEventListener("click", () => {
         window.currentPortions++;
         document.getElementById("portion-display").innerText = window.currentPortions;
@@ -169,6 +157,45 @@ document.addEventListener("DOMContentLoaded", () => {
             if(window.activeRecipePack) window.renderSelectedVariant(window.currentSelectedVariant);
         }
     });
+
+    // --- 8. 📋 INTERACTION EXPORT NOTES (COPIE PRESSE-PAPIERS SECU) ---
+    const btnCopyNotes = document.getElementById("btn-copy-notes");
+    if (btnCopyNotes) {
+        btnCopyNotes.addEventListener("click", () => {
+            if (!window.activeRecipePack) return;
+            const data = window.activeRecipePack[window.currentSelectedVariant];
+            if (!data) return;
+
+            let textOutput = `📝 LE GOURMET RECETTE : ${data.title.toUpperCase()}\n`;
+            textOutput += `⏱ Préparation : ${data.prep_time} min | Cuisson : ${data.cook_time} min\n`;
+            textOutput += `🧮 Portion(s) : ${window.currentPortions}\n\n🛒 INGRÉDIENTS :\n`;
+
+            data.ingredients.forEach(ing => {
+                const qty = (parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '');
+                textOutput += `- ${qty} ${ing.unit} ${ing.name}\n`;
+            });
+
+            textOutput += `\n🍳 PRÉPARATION :\n`;
+            if (Array.isArray(data.steps)) {
+                data.steps.forEach((step, idx) => {
+                    textOutput += `${idx + 1}. ${step}\n`;
+                });
+            } else {
+                textOutput += `${data.steps}\n`;
+            }
+
+            // Sauvegarde dans le presse-papiers natif
+            navigator.clipboard.writeText(textOutput).then(() => {
+                const oldText = btnCopyNotes.innerText;
+                btnCopyNotes.innerText = "Copié dans vos notes ! ✓";
+                btnCopyNotes.style.borderColor = "var(--healthy-color)";
+                setTimeout(() => {
+                    btnCopyNotes.innerText = oldText;
+                    btnCopyNotes.style.borderColor = "var(--border-glass)";
+                }, 200px);
+            }).catch(err => console.error("Erreur d'exportation de notes :", err));
+        });
+    }
 
     // --- 9. AGGRÉGATION DU PAYLOAD COMPLET ---
     const btnGenerate = document.getElementById("btn-generate");
@@ -192,6 +219,11 @@ document.addEventListener("DOMContentLoaded", () => {
             if (document.getElementById('t-ing')?.checked) {
                 ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
             }
+
+            // Remplissage des variables globales pour affichage
+            currentHardware = document.getElementById('t-equip').checked && hardware.length > 0 ? hardware.join(', ') : "Libre";
+            currentComplex = document.getElementById('t-sliders').checked ? document.getElementById('time-val').innerText : "Auto";
+            currentRisk = document.getElementById('t-sliders').checked ? document.getElementById('risk-val').innerText : "Original";
 
             const payload = {
                 mode: isAdvanced ? "Avancé" : "Simple",
@@ -223,10 +255,8 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (err) {
                 console.error(err);
                 document.getElementById("recipeTitle").innerText = "Surcharge Moléculaire";
-                const recipeDesc = document.getElementById("recipeDesc");
-                if (recipeDesc) {
-                    recipeDesc.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande.</p>";
-                }
+                const stepsList = document.getElementById("stepsList");
+                if(stepsList) stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande.</p>";
                 document.getElementById("recipeCard").classList.add("show");
             } finally {
                 btnGenerate.disabled = false;
@@ -256,6 +286,12 @@ window.renderSelectedVariant = function(variantKey) {
     document.getElementById("p-time").innerText = data.prep_time ? `${data.prep_time} min` : "--";
     document.getElementById("c-time").innerText = data.cook_time ? `${data.cook_time} min` : "--";
     document.getElementById("t-time").innerText = data.total_time ? `${data.total_time} min` : "--";
+    
+    // Rendu dynamique des Context Pills Premium
+    document.getElementById("r-equip").innerText = currentHardware;
+    document.getElementById("r-complex").innerText = currentComplex;
+    document.getElementById("r-risk").innerText = currentRisk;
+
     document.getElementById("r-nova").innerText = `NOVA ${data.nova_score || '?'}`;
     
     if (data.macros) {
@@ -264,30 +300,16 @@ window.renderSelectedVariant = function(variantKey) {
         document.getElementById("r-glu").innerText = data.macros.glucides || "--";
     }
 
-    // AJOUT DYNAMIQUE : Affichage des 3 infos demandées (Matériel, Risque, Difficulté)
-    const hardware = [];
-    document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.innerText.trim()));
-    const activeEquip = hardware.length > 0 ? hardware.join(', ') : "Classique";
-    const activeRisk = document.getElementById('risk-val')?.innerText || "Original";
-    const activeTime = document.getElementById('time-val')?.innerText || "Amateur";
-
-    // Injection sécurisée dans la zone des badges (Si les conteneurs existent dans le HTML)
-    if(document.getElementById("r-equip")) document.getElementById("r-equip").innerText = `Matériel : ${activeEquip}`;
-    if(document.getElementById("r-risk")) document.getElementById("r-risk").innerText = `Audace : ${activeRisk}`;
-    if(document.getElementById("r-difficulty")) document.getElementById("r-difficulty").innerText = `Niveau : ${activeTime}`;
-
     const ingList = document.getElementById("ingredientsList");
     if (ingList && data.ingredients && Array.isArray(data.ingredients)) {
         ingList.innerHTML = data.ingredients.map(ing => {
             const calculatedQty = (parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '');
-            return `<li><input type="checkbox"> <label><strong>${calculatedQty} ${ing.unit}</strong> ${ing.name}</label></li>`;
+            return `<li><div class="custom-checkbox"></div> <label><strong>${calculatedQty} ${ing.unit}</strong> ${ing.name}</label></li>`;
         }).join('');
 
         ingList.querySelectorAll('li').forEach(li => {
-            li.addEventListener('click', (e) => {
-                const chk = li.querySelector('input');
-                if (e.target !== chk) chk.checked = !chk.checked;
-                li.classList.toggle('checked-item', chk.checked);
+            li.addEventListener('click', () => {
+                li.classList.toggle('checked-item');
             });
         });
     }
