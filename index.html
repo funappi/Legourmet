@@ -1,14 +1,15 @@
-
 <!DOCTYPE html>
 <html lang="fr" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Le Gourmet - Laboratoire d'Alchimie Culinaire</title>
+    <title>Le Gourmet - Laboratoire d'Alchimie Culinaire Premium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app-container">
+        
         <aside class="tools-panel glass">
             <header>
                 <h1>Le Gourmet</h1>
@@ -19,14 +20,15 @@
             </header>
 
             <div id="simple-mode" class="active-mode section">
-                <h2>Envie du moment</h2>
+                <h2>Inspiration du moment</h2>
                 <textarea id="simple-prompt-input" placeholder="Décrivez votre plat de rêve (ex: un bowl chaud d'inspiration asiatique et épicée)..."></textarea>
             </div>
 
             <div id="advanced-mode" class="hidden-mode">
+                
                 <div class="control-group section">
                     <div class="group-header">
-                        <h2>Saisie Tri-Entrée (Bases de Recette)</h2>
+                        <h2>Saisie Tri-Entrée (Bases)</h2>
                         <label class="switch"><input type="checkbox" id="t-slots" checked><span class="slider"></span></label>
                     </div>
                     <div class="group-content" id="c-slots">
@@ -52,7 +54,7 @@
                         <label class="switch"><input type="checkbox" id="t-ing" checked><span class="slider"></span></label>
                     </div>
                     <div class="group-content" id="c-ing">
-                        <input type="text" class="ingredient-autocomplete-input" data-category="anti-gaspi" placeholder="Ajouter vos restes génériques (ex: ail, crème, oignon)...">
+                        <input type="text" class="ingredient-autocomplete-input" data-category="anti-gaspi" placeholder="Ajouter vos restes génériques (ex: ail, crème)...">
                         <div class="tags-output-zone" id="tags-antigaspi-container"></div>
                     </div>
                 </div>
@@ -129,6 +131,7 @@
         </aside>
 
         <main class="result-panel glass">
+            
             <div class="variation-tabs" id="variationTabsZone" style="display: none;">
                 <button class="var-tab active-variant" data-variant="original">✨ Original</button>
                 <button class="var-tab" data-variant="healthy">🌿 Healthy</button>
@@ -150,36 +153,45 @@
             <div class="mrcook-layout" id="recipeCard">
                 <div class="recipe-top-header">
                     <h2 id="recipeTitle">Laboratoire en attente</h2>
-                    
-                    <div class="mrcook-time-row">
-                        <div class="time-box"><span>⏱ Prép.</span><strong id="p-time">-- min</strong></div>
-                        <div class="time-box"><span>🔥 Cuisson</span><strong id="c-time">-- min</strong></div>
-                        <div class="time-box total-time-box"><span>⌛ TOTAL</span><strong id="t-time">-- min</strong></div>
-                    </div>
+                </div>
 
-                    <div class="meta-badges" id="recipeBadges">
-                        <div class="badge nova" id="r-nova">NOVA --</div>
-                        <div class="badge macro-pro">Prot: <span id="r-pro">--g</span></div>
-                        <div class="badge macro-lip">Lip: <span id="r-lip">--g</span></div>
-                        <div class="badge macro-glu">Gluc: <span id="r-glu">--g</span></div>
-                    </div>
+                <div class="mrcook-time-row">
+                    <div class="time-box"><span>⏱ Prép.</span><strong id="p-time">-- min</strong></div>
+                    <div class="time-box"><span>🔥 Cuisson</span><strong id="c-time">-- min</strong></div>
+                    <div class="time-box total-time-box"><span>⌛ TOTAL</span><strong id="t-time">-- min</strong></div>
+                </div>
+
+                <div class="recipe-context-bar">
+                    <div class="context-pill"><i class="icon">🔪</i> Équipement: <span class="val" id="r-equip">--</span></div>
+                    <div class="context-pill"><i class="icon">👨‍🍳</i> Complexité: <span class="val" id="r-complex">--</span></div>
+                    <div class="context-pill"><i class="icon">🌶️</i> Risque: <span class="val" id="r-risk">--</span></div>
+                </div>
+
+                <div class="meta-badges" id="recipeBadges">
+                    <div class="badge nova" id="r-nova">NOVA --</div>
+                    <div class="badge macro-pro">Prot: <span id="r-pro">--g</span></div>
+                    <div class="badge macro-lip">Lip: <span id="r-lip">--g</span></div>
+                    <div class="badge macro-glu">Gluc: <span id="r-glu">--g</span></div>
                 </div>
 
                 <div class="recipe-split-columns">
                     <div class="mrcook-left-column">
-                        <h3>Ingrédients <small>(cliquez pour barrer)</small></h3>
+                        <h3>Ingrédients <small>(cliquez pour cocher)</small></h3>
                         <div class="portions-widget">
-                            <button id="btn-minus">-</button>
-                            <span id="portion-display">1</span> pers.
-                            <button id="btn-plus">+</button>
+                            <span>Portions</span>
+                            <div style="display: flex; gap: 5px; align-items: center;">
+                                <button id="btn-minus">-</button>
+                                <span id="portion-display" style="width: 20px; text-align: center;">1</span>
+                                <button id="btn-plus">+</button>
+                            </div>
                         </div>
                         <ul id="ingredientsList" class="ingredients-checklist">
-                            <li>Sélectionnez vos directives moléculaires à gauche, puis activez la cinétique de cuisson.</li>
+                            <li><div class="custom-checkbox"></div> <label>Sélectionnez vos directives moléculaires à gauche, puis activez la cinétique de cuisson.</label></li>
                         </ul>
                     </div>
 
                     <div class="mrcook-right-column">
-                        <h3>Préparation <small>(cliquez pour barrer)</small></h3>
+                        <h3>Étapes de Cuisson <small>(cliquez pour valider)</small></h3>
                         <div id="stepsList" class="steps-ordered-list">
                             <p>En attente du chef IA.</p>
                         </div>
