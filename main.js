@@ -4,7 +4,7 @@ window.activeRecipePack = null;
 window.currentSelectedVariant = "original";
 window.currentPortions = 1;
 
-// Stockage des configurations pour affichage
+// Stockage sécurisé des configurations pour affichage
 let currentHardware = "Libre";
 let currentComplex = "Amateur";
 let currentRisk = "Original";
@@ -71,13 +71,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const timeLevels = { "1": "Fast Food", "2": "Amateur", "3": "Guide Michelin" };
 
     document.getElementById('slider-risk')?.addEventListener('input', (e) => {
-        document.getElementById('risk-val').innerText = riskLevels[e.target.value];
+        const riskVal = document.getElementById('risk-val');
+        if (riskVal) riskVal.innerText = riskLevels[e.target.value];
     });
     document.getElementById('slider-time')?.addEventListener('input', (e) => {
-        document.getElementById('time-val').innerText = timeLevels[e.target.value];
+        const timeVal = document.getElementById('time-val');
+        if (timeVal) timeVal.innerText = timeLevels[e.target.value];
     });
 
-    // --- 5. 🌟 LOGIQUE INTERACTIVE DE LA ROUE DES SAVEURS (CLIC SECU 4 DIRECTIONS + UMAMI) ---
+    // --- 5. LOGIQUE INTERACTIVE DE LA ROUE DES SAVEURS ---
     const wheel = document.getElementById('flavorWheel');
     const cursor = document.getElementById('flavorCursor');
     const resultText = document.getElementById('flavor-result');
@@ -90,19 +92,16 @@ document.addEventListener("DOMContentLoaded", () => {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
-            // Calcul du positionnement graphique exact
             cursor.style.left = `${x}px`;
             cursor.style.top = `${y}px`;
 
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
             
-            // Calcul de la distance géométrique par rapport au centre (Umami)
             const dx = x - centerX;
             const dy = y - centerY;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
-            // Si le clic est dans le rond central (Umami)
             if (distance < 24) {
                 resultText.innerText = "Intense & Umami";
                 resultText.style.color = "var(--umami-color)";
@@ -111,7 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // Sinon, détection angulaire sur 4 directions strictes (90° par quadrant)
             const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 180;
 
             if (angle >= 270 && angle < 360) {
@@ -147,18 +145,20 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- 7. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
     document.getElementById("btn-plus")?.addEventListener("click", () => {
         window.currentPortions++;
-        document.getElementById("portion-display").innerText = window.currentPortions;
+        const portionDisplay = document.getElementById("portion-display");
+        if (portionDisplay) portionDisplay.innerText = window.currentPortions;
         if(window.activeRecipePack) window.renderSelectedVariant(window.currentSelectedVariant);
     });
     document.getElementById("btn-minus")?.addEventListener("click", () => {
         if (window.currentPortions > 1) {
             window.currentPortions--;
-            document.getElementById("portion-display").innerText = window.currentPortions;
+            const portionDisplay = document.getElementById("portion-display");
+            if (portionDisplay) portionDisplay.innerText = window.currentPortions;
             if(window.activeRecipePack) window.renderSelectedVariant(window.currentSelectedVariant);
         }
     });
 
-    // --- 8. 📋 INTERACTION EXPORT NOTES (COPIE PRESSE-PAPIERS SECU) ---
+    // --- 8. INTERACTION EXPORT NOTES ---
     const btnCopyNotes = document.getElementById("btn-copy-notes");
     if (btnCopyNotes) {
         btnCopyNotes.addEventListener("click", () => {
@@ -184,7 +184,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 textOutput += `${data.steps}\n`;
             }
 
-            // Sauvegarde dans le presse-papiers natif
             navigator.clipboard.writeText(textOutput).then(() => {
                 const oldText = btnCopyNotes.innerText;
                 btnCopyNotes.innerText = "Copié dans vos notes ! ✓";
@@ -203,9 +202,15 @@ document.addEventListener("DOMContentLoaded", () => {
         btnGenerate.addEventListener("click", async () => {
             btnGenerate.disabled = true;
             btnGenerate.innerText = "Alchimie en cours...";
-            document.getElementById("recipeCard").classList.remove("show");
-            document.getElementById("variationTabsZone").style.display = "none";
-            document.getElementById("loading-display").classList.remove("hidden-mode");
+            
+            const recipeCard = document.getElementById("recipeCard");
+            if (recipeCard) recipeCard.classList.remove("show");
+            
+            const variationTabsZone = document.getElementById("variationTabsZone");
+            if (variationTabsZone) variationTabsZone.style.display = "none";
+            
+            const loadingDisplay = document.getElementById("loading-display");
+            if (loadingDisplay) loadingDisplay.classList.remove("hidden-mode");
 
             const hardware = [];
             document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
@@ -220,10 +225,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
             }
 
-            // Remplissage des variables globales pour affichage
-            currentHardware = document.getElementById('t-equip').checked && hardware.length > 0 ? hardware.join(', ') : "Libre";
-            currentComplex = document.getElementById('t-sliders').checked ? document.getElementById('time-val').innerText : "Auto";
-            currentRisk = document.getElementById('t-sliders').checked ? document.getElementById('risk-val').innerText : "Original";
+            const riskVal = document.getElementById('risk-val');
+            const timeVal = document.getElementById('time-val');
+            const flavorResult = document.getElementById('flavor-result');
+
+            currentHardware = document.getElementById('t-equip')?.checked && hardware.length > 0 ? hardware.join(', ') : "Libre";
+            currentComplex = document.getElementById('t-sliders')?.checked && timeVal ? timeVal.innerText : "Amateur";
+            currentRisk = document.getElementById('t-sliders')?.checked && riskVal ? riskVal.innerText : "Original";
 
             const payload = {
                 mode: isAdvanced ? "Avancé" : "Simple",
@@ -231,9 +239,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 ingredients: isAdvanced ? (ingredientsPack.length > 0 ? ingredientsPack : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
                 fusion: isAdvanced ? (document.getElementById("t-fusion").checked ? (document.getElementById("fusion-input")?.value || "Auto_FoodPairing") : "Auto_FoodPairing") : "Auto_FoodPairing",
                 equipment: isAdvanced ? (document.getElementById("t-equip").checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
-                risk: isAdvanced ? (document.getElementById("t-sliders").checked ? document.getElementById("risk-val").innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
-                time: isAdvanced ? (document.getElementById("t-sliders").checked ? document.getElementById("time-val").innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
-                flavor: isAdvanced ? (document.getElementById("t-flavor").checked ? document.getElementById("flavor-result").innerText : "Auto_FoodPairing") : "Auto_FoodPairing"
+                risk: isAdvanced ? (document.getElementById("t-sliders").checked && riskVal ? riskVal.innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
+                time: isAdvanced ? (document.getElementById("t-sliders").checked && timeVal ? timeVal.innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
+                flavor: isAdvanced ? (document.getElementById("t-flavor").checked && flavorResult ? flavorResult.innerText : "Auto_FoodPairing") : "Auto_FoodPairing"
             };
 
             try {
@@ -247,21 +255,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 window.activeRecipePack = await response.json();
                 window.currentPortions = 1;
-                document.getElementById("portion-display").innerText = "1";
                 
-                document.getElementById("variationTabsZone").style.display = "flex";
-                document.querySelector('[data-variant="original"]').click();
+                const portionDisplay = document.getElementById("portion-display");
+                if (portionDisplay) portionDisplay.innerText = "1";
+                
+                if (variationTabsZone) variationTabsZone.style.display = "flex";
+                
+                const origTab = document.querySelector('[data-variant="original"]');
+                if (origTab) origTab.click();
 
             } catch (err) {
                 console.error(err);
-                document.getElementById("recipeTitle").innerText = "Surcharge Moléculaire";
+                const recipeTitle = document.getElementById("recipeTitle");
+                if (recipeTitle) recipeTitle.innerText = "Surcharge Moléculaire";
                 const stepsList = document.getElementById("stepsList");
-                if(stepsList) stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande.</p>";
-                document.getElementById("recipeCard").classList.add("show");
+                if (stepsList) stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande.</p>";
+                if (recipeCard) recipeCard.classList.add("show");
             } finally {
                 btnGenerate.disabled = false;
                 btnGenerate.innerText = "Cuisiner 🚀";
-                document.getElementById("loading-display").classList.add("hidden-mode");
+                if (loadingDisplay) loadingDisplay.classList.add("hidden-mode");
             }
         });
     }
@@ -282,22 +295,38 @@ window.renderSelectedVariant = function(variantKey) {
         plateImg.style.backgroundImage = `url('https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${keywords}?width=400&height=400&nologo=true')`;
     }
 
-    document.getElementById("recipeTitle").innerText = data.title || "Titre inconnu";
-    document.getElementById("p-time").innerText = data.prep_time ? `${data.prep_time} min` : "--";
-    document.getElementById("c-time").innerText = data.cook_time ? `${data.cook_time} min` : "--";
-    document.getElementById("t-time").innerText = data.total_time ? `${data.total_time} min` : "--";
+    const rTitle = document.getElementById("recipeTitle");
+    if (rTitle) rTitle.innerText = data.title || "Titre inconnu";
     
-    // Rendu dynamique des Context Pills Premium
-    document.getElementById("r-equip").innerText = currentHardware;
-    document.getElementById("r-complex").innerText = currentComplex;
-    document.getElementById("r-risk").innerText = currentRisk;
+    const pTime = document.getElementById("p-time");
+    if (pTime) pTime.innerText = data.prep_time ? `${data.prep_time} min` : "--";
+    
+    const cTime = document.getElementById("c-time");
+    if (cTime) cTime.innerText = data.cook_time ? `${data.cook_time} min` : "--";
+    
+    const tTime = document.getElementById("t-time");
+    if (tTime) tTime.innerText = data.total_time ? `${data.total_time} min` : "--";
+    
+    // Rendu sécurisé des Context Pills Optionnels
+    const rEquip = document.getElementById("r-equip");
+    if (rEquip) rEquip.innerText = currentHardware;
+    
+    const rComplex = document.getElementById("r-complex") || document.getElementById("r-complex");
+    if (rComplex) rComplex.innerText = currentComplex;
+    
+    const rRisk = document.getElementById("r-risk");
+    if (rRisk) rRisk.innerText = currentRisk;
 
-    document.getElementById("r-nova").innerText = `NOVA ${data.nova_score || '?'}`;
+    const rNova = document.getElementById("r-nova");
+    if (rNova) rNova.innerText = `NOVA ${data.nova_score || '?'}`;
     
     if (data.macros) {
-        document.getElementById("r-pro").innerText = data.macros.proteines || "--";
-        document.getElementById("r-lip").innerText = data.macros.lipides || "--";
-        document.getElementById("r-glu").innerText = data.macros.glucides || "--";
+        const rPro = document.getElementById("r-pro");
+        if (rPro) rPro.innerText = data.macros.proteines || "--";
+        const rLip = document.getElementById("r-lip");
+        if (rLip) rLip.innerText = data.macros.lipides || "--";
+        const rGlu = document.getElementById("r-glu");
+        if (rGlu) rGlu.innerText = data.macros.glucides || "--";
     }
 
     const ingList = document.getElementById("ingredientsList");
@@ -328,5 +357,6 @@ window.renderSelectedVariant = function(variantKey) {
         }
     }
 
-    document.getElementById("recipeCard").classList.add("show");
+    const recipeCard = document.getElementById("recipeCard");
+    if (recipeCard) recipeCard.classList.add("show");
 };
