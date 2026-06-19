@@ -192,7 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 setTimeout(() => {
                     btnCopyNotes.innerText = oldText;
                     btnCopyNotes.style.borderColor = "var(--border-glass)";
-                }, 200px);
+                }, 2000);
             }).catch(err => console.error("Erreur d'exportation de notes :", err));
         });
     }
