@@ -1,5 +1,4 @@
 // main.js
-const BACKEND_URL = "https://Alexoff59.pythonanywhere.com"; // Remplacer VOTRE_PSEUDO une fois le compte créé
 
 window.activeRecipePack = null;
 window.currentSelectedVariant = "original";
