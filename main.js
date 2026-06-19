@@ -1,8 +1,11 @@
-// main.js
-
 window.activeRecipePack = null;
 window.currentSelectedVariant = "original";
 window.currentPortions = 1;
+
+// Variables pour les Context Pills
+window.currentHardware = "Aucun";
+window.currentComplex = "Amateur";
+window.currentRisk = "Original";
 
 document.addEventListener("DOMContentLoaded", () => {
     
@@ -87,36 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 6. CAPTEURS TACTILES (SWIPES) SUR L'ASSIETTE CENTRALE ---
-    let touchStartX = 0, touchStartY = 0;
-    const plate = document.getElementById('mainPlate');
-
-    if (plate) {
-        plate.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, { passive: true });
-
-        plate.addEventListener('touchend', (e) => {
-            const diffX = e.changedTouches[0].screenX - touchStartX;
-            const diffY = e.changedTouches[0].screenY - touchStartY;
-            const threshold = 50;
-
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (Math.abs(diffX) > threshold) {
-                    if (diffX > 0) document.querySelector('[data-variant="protein"]')?.click();
-                    else document.querySelector('[data-variant="gourmand"]')?.click();
-                }
-            } else {
-                if (Math.abs(diffY) > threshold) {
-                    if (diffY > 0) document.querySelector('[data-variant="healthy"]')?.click();
-                    else document.querySelector('[data-variant="original"]')?.click();
-                }
-            }
-        }, { passive: true });
-    }
-
-    // --- 7. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
+    // --- 6. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
     document.getElementById("btn-plus")?.addEventListener("click", () => {
         window.currentPortions++;
         document.getElementById("portion-display").innerText = window.currentPortions;
@@ -130,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // --- 8. AGGRÉGATION DU PAYLOAD COMPLET (RÈGLE D'OR AUTO_FOODPAIRING) ---
+    // --- 7. AGGRÉGATION DU PAYLOAD COMPLET (RÈGLE D'OR AUTO_FOODPAIRING) ---
     const btnGenerate = document.getElementById("btn-generate");
     if (btnGenerate) {
         btnGenerate.addEventListener("click", async () => {
@@ -142,6 +116,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const hardware = [];
             document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
+
+            // Mise à jour des variables de contexte pour l'affichage final
+            window.currentHardware = document.getElementById('t-equip')?.checked && hardware.length > 0 ? hardware.join(', ') : "Libre";
+            window.currentComplex = document.getElementById('t-sliders')?.checked ? document.getElementById('time-val')?.innerText : "Auto";
+            window.currentRisk = document.getElementById('t-sliders')?.checked ? document.getElementById('risk-val')?.innerText : "Auto";
 
             let ingredientsPack = [];
             if (document.getElementById('t-slots')?.checked) {
@@ -165,6 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
             };
 
             try {
+                // Requête utilisant la constante BACKEND_URL définie dans inventory.js
                 const response = await fetch(`${BACKEND_URL}/generate-recipe`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -177,15 +157,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.currentPortions = 1;
                 document.getElementById("portion-display").innerText = "1";
                 
+                document.getElementById("loading-display").classList.add("hidden-mode");
                 document.getElementById("variationTabsZone").style.display = "flex";
                 document.querySelector('[data-variant="original"]').click();
 
             } catch (err) {
-                print(err);
+                console.error(err);
                 document.getElementById("recipeTitle").innerText = "Surcharge Moléculaire";
-                const recipeDesc = document.getElementById("recipeDesc");
-                if (recipeDesc) {
-                    recipeDesc.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande.</p>";
+                const stepsList = document.getElementById("stepsList");
+                if (stepsList) {
+                    stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande ou le serveur est inaccessible.</p>";
                 }
                 document.getElementById("recipeCard").classList.add("show");
             } finally {
@@ -197,7 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// --- 9. LE MOTEUR DE RENDU INTERACTIF DOUBLE COLONNE MR. COOK ---
+// --- 8. LE MOTEUR DE RENDU INTERACTIF DOUBLE COLONNE MR. COOK ---
 window.renderSelectedVariant = function(variantKey) {
     const data = window.activeRecipePack[variantKey];
     if (!data) return;
@@ -216,6 +197,15 @@ window.renderSelectedVariant = function(variantKey) {
     document.getElementById("p-time").innerText = data.prep_time ? `${data.prep_time} min` : "--";
     document.getElementById("c-time").innerText = data.cook_time ? `${data.cook_time} min` : "--";
     document.getElementById("t-time").innerText = data.total_time ? `${data.total_time} min` : "--";
+    
+    // Remplissage des Context Pills avec les variables globales
+    const rEquip = document.getElementById("r-equip");
+    if(rEquip) rEquip.innerText = window.currentHardware;
+    const rComplex = document.getElementById("r-complex");
+    if(rComplex) rComplex.innerText = window.currentComplex;
+    const rRisk = document.getElementById("r-risk");
+    if(rRisk) rRisk.innerText = window.currentRisk;
+
     document.getElementById("r-nova").innerText = `NOVA ${data.nova_score || '?'}`;
     
     if (data.macros) {
@@ -228,14 +218,12 @@ window.renderSelectedVariant = function(variantKey) {
     if (ingList && data.ingredients && Array.isArray(data.ingredients)) {
         ingList.innerHTML = data.ingredients.map(ing => {
             const calculatedQty = (parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '');
-            return `<li><input type="checkbox"> <label><strong>${calculatedQty} ${ing.unit}</strong> ${ing.name}</label></li>`;
+            return `<li><div class="custom-checkbox"></div> <label><strong>${calculatedQty} ${ing.unit}</strong> ${ing.name}</label></li>`;
         }).join('');
 
         ingList.querySelectorAll('li').forEach(li => {
             li.addEventListener('click', (e) => {
-                const chk = li.querySelector('input');
-                if (e.target !== chk) chk.checked = !chk.checked;
-                li.classList.toggle('checked-item', chk.checked);
+                li.classList.toggle('checked-item');
             });
         });
     }
