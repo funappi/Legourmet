@@ -2,6 +2,7 @@ window.activeRecipePack = null;
 window.currentSelectedVariant = "original";
 window.currentPortions = 1;
 
+// Variables globales pour l'affichage final dans la recette
 window.currentHardware = "Aucun";
 window.currentComplex = "Amateur";
 window.currentRisk = "Original";
@@ -62,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 5. SÉLECTION DES CARDS RÉGIME ALIMENTAIRE (CHREIX UNIQUE / TOGGLE) ---
+    // --- 5. SÉLECTION DES CARDS RÉGIME ALIMENTAIRE (UNIQUE / TOGGLE) ---
     document.querySelectorAll('.diet-card').forEach(card => {
         card.addEventListener('click', () => {
             const dietContainer = document.getElementById('c-diet');
@@ -77,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 6. SÉLECTION DES CARDS MODE DE CUISSON (CHOIX UNIQUE / TOGGLE) ---
+    // --- 6. SÉLECTION DES CARDS MODE DE CUISSON (UNIQUE / TOGGLE) ---
     document.querySelectorAll('.style-card').forEach(card => {
         card.addEventListener('click', () => {
             const dietContainer = document.getElementById('c-diet');
@@ -92,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 7. VALEURS TEXTUELLES DES SLIDERS AVANCÉS ---
+    // --- 7. VALEURS TEXTUELLES DES SLIDERS ---
     const riskLevels = { "1": "Classique", "2": "Original", "3": "Aventure" };
     const timeLevels = { "1": "Fast Food", "2": "Amateur", "3": "Guide Michelin" };
 
@@ -114,57 +115,87 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 9. LA NOUVELLE LOGIQUE EN 2 ÉTAPES (IDÉES -> RECETTE) ---
+    // --- 9. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
+    document.getElementById("btn-plus")?.addEventListener("click", () => {
+        window.currentPortions++;
+        document.getElementById("portion-display").innerText = window.currentPortions;
+        if(window.activeRecipePack) window.renderSelectedVariant(window.currentSelectedVariant);
+    });
+    document.getElementById("btn-minus")?.addEventListener("click", () => {
+        if (window.currentPortions > 1) {
+            window.currentPortions--;
+            document.getElementById("portion-display").innerText = window.currentPortions;
+            if(window.activeRecipePack) window.renderSelectedVariant(window.currentSelectedVariant);
+        }
+    });
+
+    // --- 10. LA LOGIQUE EN 2 ÉTAPES (IDÉES -> RECETTE) ---
     const btnGenerate = document.getElementById("btn-generate");
     const loadingDisplay = document.getElementById("loading-display");
     const loadingText = loadingDisplay?.querySelector("h2");
     const ideasModal = document.getElementById("ideas-modal-overlay");
     const ideasContainer = document.getElementById("ideas-container");
 
-    // Fonction utilitaire pour récupérer tout le contexte de la page
+    /**
+     * Boîte à outils : Lit toute l'interface à l'instant T
+     * et pré-fabrique le bloc de données complet pour l'envoyer au serveur.
+     */
     function getFormPayload() {
         const hardware = [];
         document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
 
+        // Conversion sécurisée du Set unifié d'ingrédients en tableau
         let ingredientsPack = [];
-        if (document.getElementById('t-ing')?.checked) {
-            ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
+        if (isAdvanced && document.getElementById('t-ing')?.checked && window.selectedIngredients) {
+            ingredientsPack = Array.from(window.selectedIngredients);
         }
-        if (document.getElementById('t-slots')?.checked) {
-            ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.base));
-            ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.protein));
-            ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.vegetable));
-        }
+        if (ingredientsPack.length === 0) ingredientsPack = ["Auto_FoodPairing"];
 
         const riskVal = document.getElementById('risk-val');
         const timeVal = document.getElementById('time-val');
-        const flavorResult = document.getElementById('flavor-result');
 
-        currentHardware = document.getElementById('t-equip')?.checked && hardware.length > 0 ? hardware.join(', ') : "Libre";
-        currentComplex = document.getElementById('t-sliders')?.checked && timeVal ? timeVal.innerText : "Amateur";
-        currentRisk = document.getElementById('t-sliders')?.checked && riskVal ? riskVal.innerText : "Original";
+        window.currentHardware = document.getElementById('t-equip')?.checked && hardware.length > 0 ? hardware.join(', ') : "Libre";
+        window.currentComplex = document.getElementById('t-sliders')?.checked && timeVal ? timeVal.innerText : "Amateur";
+        window.currentRisk = document.getElementById('t-sliders')?.checked && riskVal ? riskVal.innerText : "Original";
 
+        // Définition adaptative du prompt système selon le niveau du chef choisi
+        let levelPromptSystem = "Créer une recette équilibrée et accessible.";
+        if (window.currentComplex === "Fast Food") {
+            levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef street-food. La recette doit être extrêmement rapide (moins de 20 minutes), réconfortante, gourmande (comfort food), utilisant un minimum de vaisselle (One-Pot/One-Pan) et des techniques de cuisson simples et directes.";
+        } else if (window.currentComplex === "Guide Michelin") {
+            levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef triplement étoilé au Guide Michelin. La recette doit être technique, sophistiquée, avec des textures contrastées, une réduction de sauce ou une émulsion recherchée, des découpes ultra-précises et un guide de dressage artistique minutieux digne de la haute gastronomie.";
+        }
+
+        const activeDietCard = document.querySelector('.diet-card.active');
+        const activeStyleCard = document.querySelector('.style-card.active');
+
+        // Retourne le gros bloc d'objet structuré complet
         return {
             mode: isAdvanced ? "Avancé" : "Simple",
             simple_prompt: !isAdvanced ? (document.getElementById("simple-prompt-input")?.value || "Repas surprise du chef") : "Auto_FoodPairing",
-            ingredients: isAdvanced ? (ingredientsPack.length > 0 ? ingredientsPack : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
-            equipment: isAdvanced ? (document.getElementById("t-equip").checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
-            risk: isAdvanced ? (document.getElementById("t-sliders").checked && riskVal ? riskVal.innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
-            time: isAdvanced ? (document.getElementById("t-sliders").checked && timeVal ? timeVal.innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
-            flavor: isAdvanced ? (document.getElementById("t-flavor").checked && flavorResult ? flavorResult.innerText : "Auto_FoodPairing") : "Auto_FoodPairing"
+            ingredients: ingredientsPack,
+            fusion: isAdvanced ? (document.getElementById("t-fusion")?.checked ? (document.getElementById("fusion-input")?.value || "Auto_FoodPairing") : "Auto_FoodPairing") : "Auto_FoodPairing",
+            equipment: isAdvanced ? (document.getElementById("t-equip")?.checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
+            risk: window.currentRisk,
+            time: window.currentComplex,
+            chef_instruction_directive: levelPromptSystem,
+            diet_profile: isAdvanced && document.getElementById('t-diet')?.checked ? (activeDietCard ? activeDietCard.dataset.diet : "Aucun") : "Aucun",
+            cooking_style: isAdvanced && document.getElementById('t-diet')?.checked ? (activeStyleCard ? activeStyleCard.dataset.style : "Libre") : "Libre"
         };
     }
 
-    // ÉTAPE 1 : Demande des 3 Idées
+    // ÉTAPE 1 : Demande des 3 Inspirations (generate-ideas)
     async function fetchIdeas() {
+        if (!btnGenerate) return;
         btnGenerate.disabled = true;
         btnGenerate.innerText = "Recherche d'inspirations...";
         document.getElementById("recipeCard").classList.remove("show");
         document.getElementById("variationTabsZone").style.display = "none";
         
         if (loadingText) loadingText.innerText = "Recherche de 3 idées de plats...";
-        loadingDisplay.classList.remove("hidden-mode");
+        loadingDisplay?.classList.remove("hidden-mode");
 
+        // Appel de notre boîte à outils pour récupérer tout le gros payload d'un coup !
         const payload = getFormPayload();
 
         try {
@@ -177,40 +208,38 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!response.ok) throw new Error("Erreur génération idées");
             const data = await response.json();
 
-            // Construction de la fenêtre modale
-            ideasContainer.innerHTML = "";
-            if (data.ideas && data.ideas.length > 0) {
+            if (ideasContainer && data.ideas && data.ideas.length > 0) {
+                ideasContainer.innerHTML = "";
                 data.ideas.forEach(idea => {
                     const card = document.createElement("div");
                     card.className = "idea-card";
                     card.innerHTML = `<h4>${idea.title}</h4><p>${idea.description}</p>`;
-                    
-                    // Quand on clique sur une idée, on lance l'Étape 2
                     card.addEventListener("click", () => fetchFullRecipe(idea.title));
                     ideasContainer.appendChild(card);
                 });
                 
-                loadingDisplay.classList.add("hidden-mode");
-                ideasModal.classList.remove("hidden-mode");
+                loadingDisplay?.classList.add("hidden-mode");
+                ideasModal?.classList.remove("hidden-mode");
             }
         } catch (err) {
             console.error(err);
-            loadingDisplay.classList.add("hidden-mode");
-            alert("Erreur de connexion. Veuillez réessayer.");
+            loadingDisplay?.classList.add("hidden-mode");
+            alert("Erreur de connexion avec le laboratoire. Veuillez réessayer.");
         } finally {
             btnGenerate.disabled = false;
             btnGenerate.innerText = "Cuisiner 🚀";
         }
     }
 
-    // ÉTAPE 2 : Demande de la recette complète basée sur le choix
+    // ÉTAPE 2 : Concoction finale de la recette complète basée sur le choix
     async function fetchFullRecipe(selectedTitle) {
-        ideasModal.classList.add("hidden-mode");
+        ideasModal?.classList.add("hidden-mode");
         if (loadingText) loadingText.innerText = "Le Chef élabore vos sauces et techniques...";
-        loadingDisplay.classList.remove("hidden-mode");
+        loadingDisplay?.classList.remove("hidden-mode");
 
+        // On récupère à nouveau notre gros payload mis à jour
         const payload = getFormPayload();
-        payload.selected_idea = selectedTitle; // Ajout du choix dans le payload
+        payload.selected_idea = selectedTitle; // On lui greffe juste le titre choisi
 
         try {
             const response = await fetch(`${BACKEND_URL}/generate-recipe`, {
@@ -236,106 +265,25 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error(err);
             document.getElementById("recipeTitle").innerText = "Surcharge Moléculaire";
+            const stepsList = document.getElementById("stepsList");
+            if (stepsList) stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu structurer la recette complète.</p>";
             document.getElementById("recipeCard").classList.add("show");
         } finally {
-            loadingDisplay.classList.add("hidden-mode");
+            loadingDisplay?.classList.add("hidden-mode");
         }
     }
 
-    // Écouteurs des boutons
+    // Assignation globale des déclencheurs
     if (btnGenerate) btnGenerate.addEventListener("click", fetchIdeas);
     
     document.getElementById("close-modal-btn")?.addEventListener("click", () => {
-        ideasModal.classList.add("hidden-mode");
+        ideasModal?.classList.add("hidden-mode");
     });
     
     document.getElementById("retry-ideas-btn")?.addEventListener("click", () => {
-        ideasModal.classList.add("hidden-mode");
+        ideasModal?.classList.add("hidden-mode");
         fetchIdeas();
     });
-});
-
-    // --- 10. AGGRÉGATION DU PAYLOAD COMPLET (RÈGLE D'OR AUTO_FOODPAIRING) ---
-    const btnGenerate = document.getElementById("btn-generate");
-    if (btnGenerate) {
-        btnGenerate.addEventListener("click", async () => {
-            btnGenerate.disabled = true;
-            btnGenerate.innerText = "Alchimie en cours...";
-            document.getElementById("recipeCard").classList.remove("show");
-            document.getElementById("variationTabsZone").style.display = "none";
-            document.getElementById("loading-display").classList.remove("hidden-mode");
-
-            const hardware = [];
-            document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
-
-            window.currentHardware = document.getElementById('t-equip')?.checked && hardware.length > 0 ? hardware.join(', ') : "Libre";
-            window.currentComplex = document.getElementById('t-sliders')?.checked ? document.getElementById('time-val')?.innerText : "Auto";
-            window.currentRisk = document.getElementById('t-sliders')?.checked ? document.getElementById('risk-val')?.innerText : "Auto";
-
-            // Ingénierie de prompts selon le niveau de complexité
-            let levelPromptSystem = "Créer une recette équilibrée et accessible.";
-            if (window.currentComplex === "Fast Food") {
-                levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef street-food. La recette doit être extrêmement rapide (moins de 20 minutes), réconfortante, gourmande (comfort food), utilisant un minimum de vaisselle (One-Pot/One-Pan) et des techniques de cuisson simples et directes.";
-            } else if (window.currentComplex === "Guide Michelin") {
-                levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef triplement étoilé au Guide Michelin. La recette doit être technique, sophistiquée, avec des textures contrastées, une réduction de sauce ou une émulsion recherchée, des découpes ultra-précises et un guide de dressage artistique minutieux digne de la haute gastronomie.";
-            }
-
-            // Récupération propre des cartes actives
-            const activeDietCard = document.querySelector('.diet-card.active');
-            const activeStyleCard = document.querySelector('.style-card.active');
-
-            // Formatage de la liste d'ingrédients (résistant aux structures Sets uniques ou Tableaux)
-            let ingredientsData = ["Auto_FoodPairing"];
-            if (isAdvanced && document.getElementById('t-ing')?.checked && window.selectedIngredients) {
-                ingredientsData = window.selectedIngredients instanceof Set ? Array.from(window.selectedIngredients) : Object.values(window.selectedIngredients).flatMap(s => Array.from(s));
-                if (ingredientsData.length === 0) ingredientsData = ["Auto_FoodPairing"];
-            }
-
-            const payload = {
-                mode: isAdvanced ? "Avancé" : "Simple",
-                simple_prompt: !isAdvanced ? (document.getElementById("simple-prompt-input")?.value || "Repas surprise du chef") : "Auto_FoodPairing",
-                ingredients: ingredientsData,
-                fusion: isAdvanced ? (document.getElementById("t-fusion")?.checked ? (document.getElementById("fusion-input")?.value || "Auto_FoodPairing") : "Auto_FoodPairing") : "Auto_FoodPairing",
-                equipment: isAdvanced ? (document.getElementById("t-equip")?.checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
-                risk: window.currentRisk,
-                time: window.currentComplex,
-                chef_instruction_directive: levelPromptSystem,
-                diet_profile: isAdvanced && document.getElementById('t-diet')?.checked ? (activeDietCard ? activeDietCard.dataset.diet : "Aucun") : "Aucun",
-                cooking_style: isAdvanced && document.getElementById('t-diet')?.checked ? (activeStyleCard ? activeStyleCard.dataset.style : "Libre") : "Libre"
-            };
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/generate-recipe`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-                
-                window.activeRecipePack = await response.json();
-                window.currentPortions = 1;
-                document.getElementById("portion-display").innerText = "1";
-                
-                document.getElementById("loading-display").classList.add("hidden-mode");
-                document.getElementById("variationTabsZone").style.display = "flex";
-                document.querySelector('[data-variant="original"]').click();
-
-            } catch (err) {
-                console.error(err);
-                document.getElementById("recipeTitle").innerText = "Surcharge Moléculaire";
-                const stepsList = document.getElementById("stepsList");
-                if (stepsList) {
-                    stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande ou le serveur distant est inaccessible.</p>";
-                }
-                document.getElementById("recipeCard").classList.add("show");
-            } finally {
-                btnGenerate.disabled = false;
-                btnGenerate.innerText = "Cuisiner 🚀";
-                document.getElementById("loading-display").classList.add("hidden-mode");
-            }
-        });
-    }
 });
 
 // --- 11. LE MOTEUR DE RENDU INTERACTIF DOUBLE COLONNE MR. COOK ---
@@ -374,7 +322,7 @@ window.renderSelectedVariant = function(variantKey) {
         document.getElementById("r-glu").innerText = data.macros.glucides || "--";
     }
 
-    // Ingrédients animés avec Checkbox Personnalisée (Premium Design)
+    // Rendu dynamique de la checklist des Ingrédients (Avec Checkboxes Custom)
     const ingList = document.getElementById("ingredientsList");
     if (ingList && data.ingredients && Array.isArray(data.ingredients)) {
         ingList.innerHTML = data.ingredients.map(ing => {
@@ -383,21 +331,17 @@ window.renderSelectedVariant = function(variantKey) {
         }).join('');
 
         ingList.querySelectorAll('li').forEach(li => {
-            li.addEventListener('click', () => {
-                li.classList.toggle('checked-item');
-            });
+            li.addEventListener('click', () => li.classList.toggle('checked-item'));
         });
     }
 
-    // Étapes de préparation interactives
+    // Rendu dynamique des étapes ordonnées de cuisson
     const stepsList = document.getElementById("stepsList");
     if (stepsList && data.steps) {
         if (Array.isArray(data.steps)) {
             stepsList.innerHTML = data.steps.map((step, idx) => `<p><strong>Étape ${idx + 1} :</strong> ${step}</p>`).join('');
             stepsList.querySelectorAll('p').forEach(p => {
-                p.addEventListener('click', () => {
-                    p.classList.toggle('checked-step');
-                });
+                p.addEventListener('click', () => p.classList.toggle('checked-step'));
             });
         } else {
             stepsList.innerHTML = `<p>${data.steps}</p>`;
