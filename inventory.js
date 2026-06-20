@@ -1,140 +1,123 @@
-// --- 9. LA NOUVELLE LOGIQUE EN 2 ÉTAPES (IDÉES -> RECETTE) ---
-    const btnGenerate = document.getElementById("btn-generate");
-    const loadingDisplay = document.getElementById("loading-display");
-    const loadingText = loadingDisplay?.querySelector("h2");
-    const ideasModal = document.getElementById("ideas-modal-overlay");
-    const ideasContainer = document.getElementById("ideas-container");
+const BACKEND_URL = "https://Alexoff59.pythonanywhere.com"; // Remplacer VOTRE_PSEUDO une fois le compte créé
 
-    // Fonction utilitaire pour récupérer tout le contexte de la page
-    function getFormPayload() {
-        const hardware = [];
-        document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
+window.selectedIngredients = {
+    base: new Set(),
+    protein: new Set(),
+    vegetable: new Set(),
+    "anti-gaspi": new Set()
+};
 
-        let ingredientsPack = [];
-        if (document.getElementById('t-ing')?.checked) {
-            ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
-        }
-        if (document.getElementById('t-slots')?.checked) {
-            ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.base));
-            ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.protein));
-            ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.vegetable));
-        }
+document.addEventListener("DOMContentLoaded", () => {
+    const inputs = document.querySelectorAll(".ingredient-autocomplete-input");
+    const autocompleteList = document.getElementById("autocomplete-list");
+    let debounceTimer = null;
+    let currentActiveInput = null;
 
-        const riskVal = document.getElementById('risk-val');
-        const timeVal = document.getElementById('time-val');
-        const flavorResult = document.getElementById('flavor-result');
-
-        currentHardware = document.getElementById('t-equip')?.checked && hardware.length > 0 ? hardware.join(', ') : "Libre";
-        currentComplex = document.getElementById('t-sliders')?.checked && timeVal ? timeVal.innerText : "Amateur";
-        currentRisk = document.getElementById('t-sliders')?.checked && riskVal ? riskVal.innerText : "Original";
-
-        return {
-            mode: isAdvanced ? "Avancé" : "Simple",
-            simple_prompt: !isAdvanced ? (document.getElementById("simple-prompt-input")?.value || "Repas surprise du chef") : "Auto_FoodPairing",
-            ingredients: isAdvanced ? (ingredientsPack.length > 0 ? ingredientsPack : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
-            equipment: isAdvanced ? (document.getElementById("t-equip").checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
-            risk: isAdvanced ? (document.getElementById("t-sliders").checked && riskVal ? riskVal.innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
-            time: isAdvanced ? (document.getElementById("t-sliders").checked && timeVal ? timeVal.innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
-            flavor: isAdvanced ? (document.getElementById("t-flavor").checked && flavorResult ? flavorResult.innerText : "Auto_FoodPairing") : "Auto_FoodPairing"
-        };
+    if (inputs.length === 0 || !autocompleteList) {
+        console.warn("Éléments de l'inventaire ou liste d'autocomplétion manquants dans le DOM.");
+        return;
     }
 
-    // ÉTAPE 1 : Demande des 3 Idées
-    async function fetchIdeas() {
-        btnGenerate.disabled = true;
-        btnGenerate.innerText = "Recherche d'inspirations...";
-        document.getElementById("recipeCard").classList.remove("show");
-        document.getElementById("variationTabsZone").style.display = "none";
-        
-        if (loadingText) loadingText.innerText = "Recherche de 3 idées de plats...";
-        loadingDisplay.classList.remove("hidden-mode");
+    // Écoute universelle de toutes les barres de saisie à autocomplétion
+    inputs.forEach(input => {
+        input.addEventListener("input", (e) => {
+            clearTimeout(debounceTimer);
+            autocompleteList.innerHTML = "";
+            currentActiveInput = input;
+            
+            const query = e.target.value.trim();
+            const category = input.dataset.category;
 
-        const payload = getFormPayload();
+            // RÈGLE D'OR INTERRUPTEURS : Bloquer la recherche si l'interrupteur parent est OFF
+            const toggleId = (category === "base" || category === "protein" || category === "vegetable") ? "t-slots" : "t-ing";
+            const toggle = document.getElementById(toggleId);
+            if (toggle && !toggle.checked) return;
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/generate-ideas`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) throw new Error("Erreur génération idées");
-            const data = await response.json();
-
-            // Construction de la fenêtre modale
-            ideasContainer.innerHTML = "";
-            if (data.ideas && data.ideas.length > 0) {
-                data.ideas.forEach(idea => {
-                    const card = document.createElement("div");
-                    card.className = "idea-card";
-                    card.innerHTML = `<h4>${idea.title}</h4><p>${idea.description}</p>`;
-                    
-                    // Quand on clique sur une idée, on lance l'Étape 2
-                    card.addEventListener("click", () => fetchFullRecipe(idea.title));
-                    ideasContainer.appendChild(card);
-                });
-                
-                loadingDisplay.classList.add("hidden-mode");
-                ideasModal.classList.remove("hidden-mode");
+            if (query.length < 2) {
+                autocompleteList.classList.add("hidden-mode");
+                return;
             }
-        } catch (err) {
-            console.error(err);
-            loadingDisplay.classList.add("hidden-mode");
-            alert("Erreur de connexion. Veuillez réessayer.");
-        } finally {
-            btnGenerate.disabled = false;
-            btnGenerate.innerText = "Cuisiner 🚀";
-        }
-    }
 
-    // ÉTAPE 2 : Demande de la recette complète basée sur le choix
-    async function fetchFullRecipe(selectedTitle) {
-        ideasModal.classList.add("hidden-mode");
-        if (loadingText) loadingText.innerText = "Le Chef élabore vos sauces et techniques...";
-        loadingDisplay.classList.remove("hidden-mode");
+            // Anti-rebond (Debounce) pour optimiser les performances de requêtage
+            debounceTimer = setTimeout(async () => {
+                try {
+                    // Appel à votre API locale SQLite alimentée par vos tables d'ingrédients premium
+                    const response = await fetch(`/api/ingredients?q=${encodeURIComponent(query)}`);
+                    if (!response.ok) return;
+                    
+                    const data = await response.json();
+                    autocompleteList.innerHTML = "";
 
-        const payload = getFormPayload();
-        payload.selected_idea = selectedTitle; // Ajout du choix dans le payload
+                    // GESTION ADAPTATIVE (CODE 2) : Si la BDD locale ne contient pas l'élément
+                    if (data.length === 0) {
+                        const li = document.createElement("li");
+                        li.innerText = `Ajouter le tag libre : "${query}"`;
+                        li.addEventListener("click", () => {
+                            injectIngredientTag(query, category);
+                            input.value = "";
+                            autocompleteList.classList.add("hidden-mode");
+                        });
+                        autocompleteList.appendChild(li);
+                    } else {
+                        // Sinon, on boucle sur les correspondances de la base SQLite
+                        data.forEach(item => {
+                            const li = document.createElement("li");
+                            li.innerText = `${item.nom} [${item.categorie}]`;
+                            li.addEventListener("click", () => {
+                                injectIngredientTag(item.nom, category);
+                                input.value = "";
+                                autocompleteList.classList.add("hidden-mode");
+                            });
+                            autocompleteList.appendChild(li);
+                        });
+                    }
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/generate-recipe`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+                    // Positionnement dynamique absolu de la liste déroulante juste sous l'input actif
+                    autocompleteList.style.top = `${input.offsetTop + input.offsetHeight}px`;
+                    autocompleteList.classList.remove("hidden-mode");
 
-            if (!response.ok) throw new Error("Erreur génération recette");
-            
-            window.activeRecipePack = await response.json();
-            window.currentPortions = 1;
-            
-            const portionDisplay = document.getElementById("portion-display");
-            if (portionDisplay) portionDisplay.innerText = "1";
-            
-            const variationTabsZone = document.getElementById("variationTabsZone");
-            if (variationTabsZone) variationTabsZone.style.display = "flex";
-            
-            const origTab = document.querySelector('[data-variant="original"]');
-            if (origTab) origTab.click();
-
-        } catch (err) {
-            console.error(err);
-            document.getElementById("recipeTitle").innerText = "Surcharge Moléculaire";
-            document.getElementById("recipeCard").classList.add("show");
-        } finally {
-            loadingDisplay.classList.add("hidden-mode");
-        }
-    }
-
-    // Écouteurs des boutons
-    if (btnGenerate) btnGenerate.addEventListener("click", fetchIdeas);
-    
-    document.getElementById("close-modal-btn")?.addEventListener("click", () => {
-        ideasModal.classList.add("hidden-mode");
+                } catch (err) {
+                    console.error("Erreur lors de l'appel d'autocomplétion :", err);
+                }
+            }, 200); // Temporisation de 200ms
+        });
     });
-    
-    document.getElementById("retry-ideas-btn")?.addEventListener("click", () => {
-        ideasModal.classList.add("hidden-mode");
-        fetchIdeas();
+
+    // Masquage automatique de la liste en cas de clic en dehors de la zone active
+    document.addEventListener("click", (e) => {
+        if (currentActiveInput && e.target !== currentActiveInput) {
+            autocompleteList.classList.add("hidden-mode");
+        }
     });
+
+    // Moteur d'injection et de ciblage des puces (Tags) par conteneur dédié
+    function injectIngredientTag(name, category) {
+        if (window.selectedIngredients[category].has(name)) return;
+        window.selectedIngredients[category].add(name);
+
+        // Mapping dynamique des conteneurs de destination HTML
+        const containerMap = {
+            "base": "tags-base-container",
+            "protein": "tags-protein-container",
+            "vegetable": "tags-vegetable-container",
+            "anti-gaspi": "tags-antigaspi-container"
+        };
+        
+        const container = document.getElementById(containerMap[category]);
+        if (!container) return;
+
+        const chip = document.createElement("div");
+        chip.className = "tag";
+        chip.innerHTML = `${name} <span data-name="${name}" data-cat="${category}">✖</span>`;
+        
+        // Suppression unitaire du tag
+        chip.querySelector('span').addEventListener('click', (e) => {
+            const targetName = e.target.dataset.name;
+            const targetCat = e.target.dataset.cat;
+            window.selectedIngredients[targetCat].delete(targetName);
+            chip.remove();
+        });
+
+        container.appendChild(chip);
+    }
 });
