@@ -1,6 +1,5 @@
 // inventory.js
 const BACKEND_URL = "https://alexoff59.pythonanywhere.com";
-
 window.selectedIngredients = {
     base: new Set(),
     protein: new Set(),
