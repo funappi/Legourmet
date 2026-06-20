@@ -353,3 +353,18 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
     color: #ffffff;
     text-decoration: underline;
 }
+
+.result-panel { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: flex-start; 
+    padding: 40px 20px; 
+    gap: 20px; 
+    position: relative; 
+    background: radial-gradient(circle at 50% 50%, rgba(26, 31, 41, 0.3) 0%, rgba(0,0,0,0) 100%); 
+    
+    /* 🌟 AJOUTE CES DEUX LIGNES POUR LIBÉRER LE SCROLL DE LA RECETTE : */
+    max-height: 100vh;
+    overflow-y: auto; 
+}
