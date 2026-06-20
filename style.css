@@ -233,3 +233,123 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .loader-container { text-align: center; margin-top: 50px; }
 .spinner { width: 40px; height: 40px; border: 3px solid var(--border-glass); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 20px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* 🌟 DESIGN DE LA FENÊTRE MODALE DE SÉLECTION (Inspiré de l'image) */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.hidden-mode {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ideas-modal {
+    background: #111111; /* Fond très sombre */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 550px;
+    padding: 24px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    font-size: 1.1rem;
+    color: #ffffff;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+}
+
+#close-modal-btn {
+    background: rgba(255,255,255,0.05);
+    border: none;
+    color: #94a3b8;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+#close-modal-btn:hover {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+}
+
+.ideas-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.idea-card {
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.idea-card:hover {
+    background: #222222;
+    border-color: rgba(255,255,255,0.2);
+    transform: translateY(-2px);
+}
+
+.idea-card h4 {
+    font-size: 1rem;
+    color: #ffffff;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+}
+
+.idea-card p {
+    font-size: 0.85rem;
+    color: #a1a1aa;
+    line-height: 1.4;
+}
+
+.retry-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: center;
+    margin-top: 5px;
+    transition: color 0.2s;
+}
+
+.retry-btn:hover {
+    color: #ffffff;
+    text-decoration: underline;
+}
