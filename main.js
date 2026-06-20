@@ -2,14 +2,13 @@ window.activeRecipePack = null;
 window.currentSelectedVariant = "original";
 window.currentPortions = 1;
 
-// Variables pour les Context Pills
 window.currentHardware = "Aucun";
 window.currentComplex = "Amateur";
 window.currentRisk = "Original";
 
 document.addEventListener("DOMContentLoaded", () => {
     
-    // --- 1. ARCHITECTURE DES COULEURS & MODES ---
+    // --- 1. ARCHITECTURE DES COULEURS & THÈMES ---
     const themeBtn = document.getElementById("theme-toggle");
     if (themeBtn) {
         themeBtn.addEventListener("click", () => {
@@ -18,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // --- 2. MODE SIMPLE / AVANCÉ ---
     let isAdvanced = false;
     const modeBtn = document.getElementById("mode-toggle");
     const simpleMode = document.getElementById("simple-mode");
@@ -29,19 +29,17 @@ document.addEventListener("DOMContentLoaded", () => {
             simpleMode.classList.toggle("hidden-mode", isAdvanced);
             advancedMode.classList.toggle("hidden-mode", !isAdvanced);
             modeBtn.innerText = isAdvanced ? "Mode Simple 📝" : "Mode Avancé ⚙️";
-            
             document.getElementById("autocomplete-list")?.classList.add("hidden-mode");
         });
     }
 
-    // --- 2. GESTION DES INTERRUPTEURS (RÈGLE D'OR ON/OFF) ---
+    // --- 3. GESTION DES INTERRUPTEURS (LINKAGES ON/OFF) ---
     const linkages = [
-        { t: 't-slots', c: 'c-slots' },
         { t: 't-ing', c: 'c-ing' },
         { t: 't-fusion', c: 'c-fusion' },
         { t: 't-equip', c: 'c-equip' },
         { t: 't-sliders', c: 'c-sliders' },
-        { t: 't-flavor', c: 'c-flavor' }
+        { t: 't-diet', c: 'c-diet' }
     ];
 
     linkages.forEach(link => {
@@ -54,9 +52,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // --- 3. SÉLECTION DES CARDS ÉQUIPEMENT ---
-    const equipCards = document.querySelectorAll('.equip-card');
-    equipCards.forEach(card => {
+    // --- 4. SÉLECTION DES CARDS ÉQUIPEMENT (MULTIPLE) ---
+    document.querySelectorAll('.equip-card').forEach(card => {
         card.addEventListener('click', () => {
             const equipContainer = document.getElementById('c-equip');
             if (equipContainer && !equipContainer.classList.contains('disabled')) {
@@ -65,7 +62,37 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 4. TEXTES DES SLIDERS AVANCÉS ---
+    // --- 5. SÉLECTION DES CARDS RÉGIME ALIMENTAIRE (CHREIX UNIQUE / TOGGLE) ---
+    document.querySelectorAll('.diet-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const dietContainer = document.getElementById('c-diet');
+            if (dietContainer && !dietContainer.classList.contains('disabled')) {
+                if (card.classList.contains('active')) {
+                    card.classList.remove('active');
+                } else {
+                    document.querySelectorAll('.diet-card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                }
+            }
+        });
+    });
+
+    // --- 6. SÉLECTION DES CARDS MODE DE CUISSON (CHOIX UNIQUE / TOGGLE) ---
+    document.querySelectorAll('.style-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const dietContainer = document.getElementById('c-diet');
+            if (dietContainer && !dietContainer.classList.contains('disabled')) {
+                if (card.classList.contains('active')) {
+                    card.classList.remove('active');
+                } else {
+                    document.querySelectorAll('.style-card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
+                }
+            }
+        });
+    });
+
+    // --- 7. VALEURS TEXTUELLES DES SLIDERS AVANCÉS ---
     const riskLevels = { "1": "Classique", "2": "Original", "3": "Aventure" };
     const timeLevels = { "1": "Fast Food", "2": "Amateur", "3": "Guide Michelin" };
 
@@ -76,21 +103,18 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('time-val').innerText = timeLevels[e.target.value];
     });
 
-    // --- 5. ÉCOUTEURS D'ONGLETS VARIATIONS ---
+    // --- 8. ÉCOUTEURS D'ONGLETS VARIATIONS ---
     document.querySelectorAll(".var-tab").forEach(tab => {
         tab.addEventListener("click", () => {
             if (!window.activeRecipePack) return;
-            
             document.querySelectorAll(".var-tab").forEach(t => t.classList.remove("active-variant"));
             tab.classList.add("active-variant");
-            
-            const variantKey = tab.dataset.variant;
-            window.currentSelectedVariant = variantKey;
-            window.renderSelectedVariant(variantKey);
+            window.currentSelectedVariant = tab.dataset.variant;
+            window.renderSelectedVariant(window.currentSelectedVariant);
         });
     });
 
-    // --- 6. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
+    // --- 9. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
     document.getElementById("btn-plus")?.addEventListener("click", () => {
         window.currentPortions++;
         document.getElementById("portion-display").innerText = window.currentPortions;
@@ -104,7 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // --- 7. AGGRÉGATION DU PAYLOAD COMPLET (RÈGLE D'OR AUTO_FOODPAIRING) ---
+    // --- 10. AGGRÉGATION DU PAYLOAD COMPLET (RÈGLE D'OR AUTO_FOODPAIRING) ---
     const btnGenerate = document.getElementById("btn-generate");
     if (btnGenerate) {
         btnGenerate.addEventListener("click", async () => {
@@ -117,34 +141,43 @@ document.addEventListener("DOMContentLoaded", () => {
             const hardware = [];
             document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
 
-            // Mise à jour des variables de contexte pour l'affichage final
             window.currentHardware = document.getElementById('t-equip')?.checked && hardware.length > 0 ? hardware.join(', ') : "Libre";
             window.currentComplex = document.getElementById('t-sliders')?.checked ? document.getElementById('time-val')?.innerText : "Auto";
             window.currentRisk = document.getElementById('t-sliders')?.checked ? document.getElementById('risk-val')?.innerText : "Auto";
 
-            let ingredientsPack = [];
-            if (document.getElementById('t-slots')?.checked) {
-                ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.base));
-                ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.protein));
-                ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.vegetable));
+            // Ingénierie de prompts selon le niveau de complexité
+            let levelPromptSystem = "Créer une recette équilibrée et accessible.";
+            if (window.currentComplex === "Fast Food") {
+                levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef street-food. La recette doit être extrêmement rapide (moins de 20 minutes), réconfortante, gourmande (comfort food), utilisant un minimum de vaisselle (One-Pot/One-Pan) et des techniques de cuisson simples et directes.";
+            } else if (window.currentComplex === "Guide Michelin") {
+                levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef triplement étoilé au Guide Michelin. La recette doit être technique, sophistiquée, avec des textures contrastées, une réduction de sauce ou une émulsion recherchée, des découpes ultra-précises et un guide de dressage artistique minutieux digne de la haute gastronomie.";
             }
-            if (document.getElementById('t-ing')?.checked) {
-                ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
+
+            // Récupération propre des cartes actives
+            const activeDietCard = document.querySelector('.diet-card.active');
+            const activeStyleCard = document.querySelector('.style-card.active');
+
+            // Formatage de la liste d'ingrédients (résistant aux structures Sets uniques ou Tableaux)
+            let ingredientsData = ["Auto_FoodPairing"];
+            if (isAdvanced && document.getElementById('t-ing')?.checked && window.selectedIngredients) {
+                ingredientsData = window.selectedIngredients instanceof Set ? Array.from(window.selectedIngredients) : Object.values(window.selectedIngredients).flatMap(s => Array.from(s));
+                if (ingredientsData.length === 0) ingredientsData = ["Auto_FoodPairing"];
             }
 
             const payload = {
                 mode: isAdvanced ? "Avancé" : "Simple",
                 simple_prompt: !isAdvanced ? (document.getElementById("simple-prompt-input")?.value || "Repas surprise du chef") : "Auto_FoodPairing",
-                ingredients: isAdvanced ? (ingredientsPack.length > 0 ? ingredientsPack : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
-                fusion: isAdvanced ? (document.getElementById("t-fusion").checked ? (document.getElementById("fusion-input")?.value || "Auto_FoodPairing") : "Auto_FoodPairing") : "Auto_FoodPairing",
-                equipment: isAdvanced ? (document.getElementById("t-equip").checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
-                risk: isAdvanced ? (document.getElementById("t-sliders").checked ? document.getElementById("risk-val").innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
-                time: isAdvanced ? (document.getElementById("t-sliders").checked ? document.getElementById("time-val").innerText : "Auto_FoodPairing") : "Auto_FoodPairing",
-                flavor: isAdvanced ? (document.getElementById("t-flavor").checked ? document.getElementById("flavor-result").innerText : "Auto_FoodPairing") : "Auto_FoodPairing"
+                ingredients: ingredientsData,
+                fusion: isAdvanced ? (document.getElementById("t-fusion")?.checked ? (document.getElementById("fusion-input")?.value || "Auto_FoodPairing") : "Auto_FoodPairing") : "Auto_FoodPairing",
+                equipment: isAdvanced ? (document.getElementById("t-equip")?.checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
+                risk: window.currentRisk,
+                time: window.currentComplex,
+                chef_instruction_directive: levelPromptSystem,
+                diet_profile: isAdvanced && document.getElementById('t-diet')?.checked ? (activeDietCard ? activeDietCard.dataset.diet : "Aucun") : "Aucun",
+                cooking_style: isAdvanced && document.getElementById('t-diet')?.checked ? (activeStyleCard ? activeStyleCard.dataset.style : "Libre") : "Libre"
             };
 
             try {
-                // Requête utilisant la constante BACKEND_URL définie dans inventory.js
                 const response = await fetch(`${BACKEND_URL}/generate-recipe`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -166,7 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("recipeTitle").innerText = "Surcharge Moléculaire";
                 const stepsList = document.getElementById("stepsList");
                 if (stepsList) {
-                    stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande ou le serveur est inaccessible.</p>";
+                    stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu traiter la demande ou le serveur distant est inaccessible.</p>";
                 }
                 document.getElementById("recipeCard").classList.add("show");
             } finally {
@@ -178,7 +211,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// --- 8. LE MOTEUR DE RENDU INTERACTIF DOUBLE COLONNE MR. COOK ---
+// --- 11. LE MOTEUR DE RENDU INTERACTIF DOUBLE COLONNE MR. COOK ---
 window.renderSelectedVariant = function(variantKey) {
     const data = window.activeRecipePack[variantKey];
     if (!data) return;
@@ -198,7 +231,7 @@ window.renderSelectedVariant = function(variantKey) {
     document.getElementById("c-time").innerText = data.cook_time ? `${data.cook_time} min` : "--";
     document.getElementById("t-time").innerText = data.total_time ? `${data.total_time} min` : "--";
     
-    // Remplissage des Context Pills avec les variables globales
+    // Remplissage dynamique des Context Pills
     const rEquip = document.getElementById("r-equip");
     if(rEquip) rEquip.innerText = window.currentHardware;
     const rComplex = document.getElementById("r-complex");
@@ -214,6 +247,7 @@ window.renderSelectedVariant = function(variantKey) {
         document.getElementById("r-glu").innerText = data.macros.glucides || "--";
     }
 
+    // Ingrédients animés avec Checkbox Personnalisée (Premium Design)
     const ingList = document.getElementById("ingredientsList");
     if (ingList && data.ingredients && Array.isArray(data.ingredients)) {
         ingList.innerHTML = data.ingredients.map(ing => {
@@ -222,12 +256,13 @@ window.renderSelectedVariant = function(variantKey) {
         }).join('');
 
         ingList.querySelectorAll('li').forEach(li => {
-            li.addEventListener('click', (e) => {
+            li.addEventListener('click', () => {
                 li.classList.toggle('checked-item');
             });
         });
     }
 
+    // Étapes de préparation interactives
     const stepsList = document.getElementById("stepsList");
     if (stepsList && data.steps) {
         if (Array.isArray(data.steps)) {
