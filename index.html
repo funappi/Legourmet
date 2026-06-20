@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr" data-theme="dark">
 <head>
@@ -28,34 +29,13 @@
                 
                 <div class="control-group section">
                     <div class="group-header">
-                        <h2>Saisie Tri-Entrée (Bases)</h2>
-                        <label class="switch"><input type="checkbox" id="t-slots" checked><span class="slider"></span></label>
-                    </div>
-                    <div class="group-content" id="c-slots">
-                        <div class="smart-input-container">
-                            <input type="text" class="ingredient-autocomplete-input" data-category="base" placeholder="Ajouter un Féculent/Céréale pivot...">
-                            <div class="tags-output-zone" id="tags-base-container"></div>
-                        </div>
-                        <div class="smart-input-container">
-                            <input type="text" class="ingredient-autocomplete-input" data-category="protein" placeholder="Ajouter une Viande/Protéine pivot...">
-                            <div class="tags-output-zone" id="tags-protein-container"></div>
-                        </div>
-                        <div class="smart-input-container">
-                            <input type="text" class="ingredient-autocomplete-input" data-category="vegetable" placeholder="Ajouter un Légume pivot...">
-                            <div class="tags-output-zone" id="tags-vegetable-container"></div>
-                        </div>
-                        <ul id="autocomplete-list" class="hidden-mode"></ul>
-                    </div>
-                </div>
-
-                <div class="control-group section">
-                    <div class="group-header">
-                        <h2>Reste du réfrigérateur (Anti-Gaspi)</h2>
+                        <h2>Vos Ingrédients (Placard & Frigo)</h2>
                         <label class="switch"><input type="checkbox" id="t-ing" checked><span class="slider"></span></label>
                     </div>
                     <div class="group-content" id="c-ing">
-                        <input type="text" class="ingredient-autocomplete-input" data-category="anti-gaspi" placeholder="Ajouter vos restes génériques (ex: ail, crème)...">
-                        <div class="tags-output-zone" id="tags-antigaspi-container"></div>
+                        <input type="text" class="ingredient-autocomplete-input" placeholder="Tapez vos ingrédients (ex: pates, oeuf, creme, poulet)...">
+                        <div class="tags-output-zone" id="tags-ingredients-container"></div>
+                        <ul id="autocomplete-list" class="hidden-mode"></ul>
                     </div>
                 </div>
 
@@ -82,6 +62,36 @@
                     </div>
                 </div>
 
+                  <div class="control-group section">
+                    <div class="group-header">
+                        <h2>Profil & Configuration</h2>
+                        <label class="switch"><input type="checkbox" id="t-diet" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="group-content" id="c-diet">
+                        
+                        <div style="margin-bottom: 20px;">
+                            <label class="slider-label" style="margin-bottom: 8px; display: block;">Régime Alimentaire</label>
+                            <div class="equipment-grid">
+                                <div class="diet-card" data-diet="Végétarien">🌿 Végétarien</div>
+                                <div class="diet-card" data-diet="Végan">🌱 Végan</div>
+                                <div class="diet-card" data-diet="Sans Gluten">🌾 Sans Gluten</div>
+                                <div class="diet-card" data-diet="Sans Lactose">🥛 Sans Lactose</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="slider-label" style="margin-bottom: 8px; display: block;">Mode de Cuisson Cible</label>
+                            <div class="equipment-grid">
+                                <div class="style-card" data-style="Mijoté">🥘 Mijoté</div>
+                                <div class="style-card" data-style="Wok">🥢 Sauté au Wok</div>
+                                <div class="style-card" data-style="Frais">🥗 Frais / Cru</div>
+                                <div class="style-card" data-style="Vapeur">💨 Vapeur</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                   
                 <div class="control-group section">
                     <div class="group-header">
                         <h2>Paramètres de création</h2>
@@ -100,28 +110,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="control-group section">
-                    <div class="group-header">
-                        <h2>Profil Aromatique</h2>
-                        <label class="switch"><input type="checkbox" id="t-flavor" checked><span class="slider"></span></label>
-                    </div>
-                    <div class="group-content" id="c-flavor">
-                        <div class="chromatic-container">
-                            <div class="chromatic-wheel" id="flavorWheel">
-                                <div class="wheel-center"></div>
-                                <div class="chromatic-cursor" id="flavorCursor"></div>
-                            </div>
-                            <div class="chromatic-labels">
-                                <span class="label l-acide">HERBACÉ</span>
-                                <span class="label l-sale">ÉPICÉ</span>
-                                <span class="label l-sucre">SUCRÉ</span>
-                                <span class="label l-amer">UMAMI</span>
-                            </div>
-                        </div>
-                        <p class="flavor-output">Équilibre ciblé : <span id="flavor-result">Équilibré (Umami)</span></p>
-                    </div>
-                </div>
             </div>
 
             <footer class="aside-footer">
@@ -131,7 +119,6 @@
         </aside>
 
         <main class="result-panel glass">
-            
             <div class="variation-tabs" id="variationTabsZone" style="display: none;">
                 <button class="var-tab active-variant" data-variant="original">✨ Original</button>
                 <button class="var-tab" data-variant="healthy">🌿 Healthy</button>
@@ -162,9 +149,9 @@
                 </div>
 
                 <div class="recipe-context-bar">
-                    <div class="context-pill"><i class="icon">🔪</i> Équipement: <span class="val" id="r-equip">--</span></div>
-                    <div class="context-pill"><i class="icon">👨‍🍳</i> Complexité: <span class="val" id="r-complex">--</span></div>
-                    <div class="context-pill"><i class="icon">🌶️</i> Risque: <span class="val" id="r-risk">--</span></div>
+                    <div class="context-pill">🔪 Équipement: <span class="val" id="r-equip">--</span></div>
+                    <div class="context-pill">👨‍🍳 Complexité: <span class="val" id="r-complex">--</span></div>
+                    <div class="context-pill">🌶️ Risque: <span class="val" id="r-risk">--</span></div>
                 </div>
 
                 <div class="meta-badges" id="recipeBadges">
@@ -205,8 +192,7 @@
             </div>
         </main>
     </div>
-
-    <div id="ideas-modal-overlay" class="modal-overlay hidden-mode">
+<div id="ideas-modal-overlay" class="modal-overlay hidden-mode">
         <div class="ideas-modal glass">
             <div class="modal-header">
                 <h3>✨ Sélectionne une recette</h3>
@@ -217,8 +203,11 @@
             <button id="retry-ideas-btn" class="retry-btn">Rien n'a été trouvé ? Essaie encore une fois</button>
         </div>
     </div>
-    
+
+
+
     <script src="inventory.js"></script>
     <script src="main.js"></script>
+
 </body>
 </html>
