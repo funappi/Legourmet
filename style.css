@@ -71,7 +71,7 @@ body {
 }
 
 /* ==========================================================================
-   3. PANNEAU DE CONTRÔLE (GAUCHE)
+   3. PANNEAU DE CONTRÃ”LE (GAUCHE)
    ========================================================================== */
 .glass {
     background: var(--panel-bg);
@@ -117,7 +117,7 @@ h2 { font-size: 0.9rem; border-bottom: 1px solid var(--border-glass); padding-bo
 input:checked + .slider { background-color: var(--accent); }
 input:checked + .slider:before { transform: translateX(18px); }
 
-/* Inputs & Autocomplétion (Rétabli du Code 1) */
+/* Inputs & AutocomplÃ©tion (RÃ©tabli du Code 1) */
 .smart-input-container { position: relative; margin-bottom: 10px; }
 input[type="text"], textarea { width: 100%; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-glass); color: var(--text-light); padding: 12px; border-radius: 8px; font-size: 0.85rem; transition: 0.2s;}
 input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); }
@@ -132,10 +132,37 @@ textarea { min-height: 90px; resize: none; }
 .tag span { cursor: pointer; font-weight: bold; color: var(--accent); transition: 0.2s;}
 .tag span:hover { color: #fff; }
 
-/* Équipements */
-.equipment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.equip-card { background: rgba(0,0,0,0.15); border: 1px solid var(--border-glass); padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; font-size: 0.85rem; font-weight: 500; user-select: none; transition: 0.2s;}
-.equip-card.active { border-color: var(--accent); background: rgba(244, 63, 94, 0.1); color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+/* Structure de Grille Unique (Anciennement .equipment-grid, .diet-grid, .style-grid) */
+
+.equipment-grid, .diet-grid, .style-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+/* Style de Carte Commun (Anciennement .equip-card, .diet-card, .style-card) */
+
+.equip-card, .diet-card, .style-card {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-glass);
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    user-select: none;
+    transition: 0.2s;
+}
+
+/* État Actif Commun (Anciennement .active de chaque catégorie) */
+
+.equip-card.active, .diet-card.active, .style-card.active {
+    border-color: var(--accent);
+    background: rgba(244, 63, 94, 0.1);
+    color: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+}
 
 /* Sliders */
 .slider-container { margin-bottom: 12px; }
@@ -144,25 +171,8 @@ textarea { min-height: 90px; resize: none; }
 input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
 .ticks { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; padding: 0 2px; }
 
-/* Cercle Chromatique (Rétabli du Code 1) */
-.chromatic-container { display: flex; justify-content: center; position: relative; height: 140px; align-items: center; margin-top: 10px; }
-.chromatic-wheel { width: 110px; height: 110px; border-radius: 50%; background: conic-gradient(#10b981 0deg 90deg, #f59e0b 90deg 180deg, #f43f5e 180deg 270deg, #3b82f6 270deg 360deg); position: relative; cursor: crosshair; box-shadow: inset 0 0 15px rgba(0,0,0,0.5), 0 4px 15px rgba(0,0,0,0.3); }
-.wheel-center { position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px; background: var(--panel-bg); border-radius: 50%; z-index: 1; transition: background 0.4s;}
-.chromatic-cursor { position: absolute; width: 10px; height: 10px; background: white; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; box-shadow: 0 0 8px rgba(255,255,255,1); pointer-events: none; }
-.chromatic-labels { position: absolute; width: 110px; height: 110px; pointer-events: none; }
-.label { position: absolute; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.5px; text-align: center; }
-.l-acide { top: -18px; left: 50%; transform: translateX(-50%); color: var(--healthy-color); width: max-content; }
-.l-sale { top: 50%; right: -42px; transform: translateY(-50%); color: var(--fat-color); width: max-content; }
-.l-sucre { bottom: -18px; left: 50%; transform: translateX(-50%); color: var(--accent); width: max-content; }
-.l-amer { top: 50%; left: -46px; transform: translateY(-50%); color: var(--protein-color); width: max-content; }
-.flavor-output { text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 10px; }
-
-.btn-primary { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent) 0%, #ff7eb3 100%); border: none; border-radius: 10px; color: white; font-size: 1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px var(--accent-glow); transition: 0.2s;}
-.btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(244, 63, 94, 0.5); }
-.btn-primary:disabled { background: #334155 !important; color: #64748b; box-shadow: none; cursor: not-allowed; }
-
 /* ==========================================================================
-   4. RÉSULTAT (DROITE)
+   4. RÃ‰SULTAT (DROITE)
    ========================================================================== */
 .result-panel { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 20px; gap: 20px; position: relative; overflow: hidden; background: radial-gradient(circle at 50% 50%, rgba(26, 31, 41, 0.3) 0%, rgba(0,0,0,0) 100%); }
 .variation-tabs { display: flex; gap: 10px; z-index: 10; margin-bottom: 10px; flex-wrap: wrap; justify-content: center; }
@@ -223,7 +233,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 
 .custom-checkbox { width: 18px; height: 18px; border: 2px solid var(--text-muted); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; transition: 0.2s;}
 .checked-item .custom-checkbox { background: var(--accent); border-color: var(--accent); }
-.checked-item .custom-checkbox::after { content: "✓"; color: white; font-size: 11px; font-weight: bold; }
+.checked-item .custom-checkbox::after { content: "âœ“"; color: white; font-size: 11px; font-weight: bold; }
 
 .steps-ordered-list p { font-size: 0.95rem; line-height: 1.6; margin-bottom: 15px; color: var(--text-light); padding-left: 12px; border-left: 2px solid var(--border-glass); cursor: pointer; user-select: none; transition: opacity 0.2s; }
 .steps-ordered-list p.checked-step { text-decoration: line-through; opacity: 0.3; border-left-color: var(--accent); color: var(--text-muted); }
