@@ -1,5 +1,5 @@
 /* ==========================================================================
-   1. VARIABLES PREMIUM (DARK & LIGHT MODE)
+   1. CONFIGURATION DU DESIGN SYSTEM (VARIABLES & THEMES)
    ========================================================================== */
 :root, :root[data-theme="dark"] {
     --bg-dark: #0f1115;
@@ -28,7 +28,7 @@
 }
 
 /* ==========================================================================
-   2. RESET, SCROLLBAR & BODY (Issu du Code 2)
+   2. FONDATIONS (RESET, SCROLLBAR & TYPOGRAPHIE)
    ========================================================================== */
 * {
     box-sizing: border-box;
@@ -37,10 +37,20 @@
     font-family: 'Inter', system-ui, sans-serif;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
-::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+::-webkit-scrollbar { 
+    width: 6px; 
+}
+::-webkit-scrollbar-track { 
+    background: rgba(0,0,0,0.1); 
+    border-radius: 10px; 
+}
+::-webkit-scrollbar-thumb { 
+    background: rgba(148, 163, 184, 0.3); 
+    border-radius: 10px; 
+}
+::-webkit-scrollbar-thumb:hover { 
+    background: var(--accent); 
+}
 
 body {
     background-color: var(--bg-dark);
@@ -53,12 +63,48 @@ body {
     transition: background-color 0.4s, color 0.4s;
 }
 
+/* ==========================================================================
+   3. SQUELETTE ET AGENCEMENT DE L'APPLICATION (LAYOUTS)
+   ========================================================================== */
 .app-container {
     display: grid;
     grid-template-columns: 420px 1fr;
     height: 100vh;
     padding: 20px;
     gap: 20px;
+}
+
+.glass {
+    background: var(--panel-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-glass);
+    border-radius: 16px;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+/* Panneau Latéral de Configuration (Gauche) */
+.tools-panel {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow-x: hidden;
+    width: 100%;
+}
+
+/* Panneau de Restitution de la Recette (Droite) */
+.result-panel { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: flex-start; 
+    padding: 40px 20px; 
+    gap: 20px; 
+    position: relative; 
+    max-height: 100vh;
+    overflow-y: auto; 
+    background: radial-gradient(circle at 50% 50%, rgba(26, 31, 41, 0.3) 0%, rgba(0,0,0,0) 100%); 
 }
 
 @media (max-width: 1000px) {
@@ -70,42 +116,18 @@ body {
     body { overflow: auto; }
 }
 
-/* ==========================================================================
-   3. PANNEAU DE CONTRÃ”LE (GAUCHE)
-   ========================================================================== */
-.glass {
-    background: var(--panel-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--border-glass);
-    border-radius: 16px;
-    padding: 24px;
-    overflow-y: auto;
-}
-
-.tools-panel {
-    display: flex;
-    flex-direction: column;
-    position: relative;
-}
-
+/* Typographies de Structure */
 header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; position: relative; }
 h1 { font-size: 1.6rem; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); font-family: 'Poppins', sans-serif;}
-.tagline { color: var(--text-muted); font-size: 0.8rem; font-family: 'Poppins', sans-serif;}
 h2 { font-size: 0.9rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); margin-bottom: 15px; font-family: 'Poppins', sans-serif;}
-
+.tagline { color: var(--text-muted); font-size: 0.8rem; font-family: 'Poppins', sans-serif;}
 .section { margin-bottom: 24px; }
-.hidden-mode { display: none !important; }
 
-.controls-panel-top { position: absolute; top: 0; right: 0; }
-.control-btn { background: rgba(0,0,0,0.1); border: 1px solid var(--border-glass); color: var(--text-light); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; font-weight: 600;}
-.control-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* ==========================================================================
+   4. COMPOSANTS INTERACTIFS COMMUNS (BUTTONS, CARDS, SWITCHES)
+   ========================================================================== */
 
-.theme-btn { background: transparent; border: 1px solid var(--border-glass); color: var(--text-muted); padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; margin-bottom: 10px; transition: 0.2s;}
-.theme-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-light); }
-.aside-footer { margin-top: auto; padding-top: 15px; }
-
-/* Interrupteurs (Switches) */
+/* Interrupteurs (Switches ON/OFF) */
 .group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .group-content { transition: opacity 0.3s ease, filter 0.3s ease; }
 .group-content.disabled { opacity: 0.25; pointer-events: none; filter: grayscale(100%); }
@@ -117,97 +139,124 @@ h2 { font-size: 0.9rem; border-bottom: 1px solid var(--border-glass); padding-bo
 input:checked + .slider { background-color: var(--accent); }
 input:checked + .slider:before { transform: translateX(18px); }
 
-/* Inputs & AutocomplÃ©tion (RÃ©tabli du Code 1) */
-.smart-input-container { position: relative; margin-bottom: 10px; }
-input[type="text"], textarea { width: 100%; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-glass); color: var(--text-light); padding: 12px; border-radius: 8px; font-size: 0.85rem; transition: 0.2s;}
-input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); }
-textarea { min-height: 90px; resize: none; }
-
-#autocomplete-list { list-style: none; background: rgba(15, 23, 42, 0.98); border: 1px solid var(--border-glass); border-radius: 8px; max-height: 180px; overflow-y: auto; position: absolute; width: 100%; z-index: 1000; box-shadow: 0 12px 30px rgba(0,0,0,0.7); }
-#autocomplete-list li { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.85rem; color: #fff; transition: 0.2s;}
-#autocomplete-list li:hover { background: var(--accent); color: white; }
-
-.tags-output-zone { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; min-height: 5px; }
-.tag { background: rgba(244, 63, 94, 0.12); border: 1px solid var(--accent); color: var(--text-light); padding: 4px 10px; border-radius: 16px; font-size: 0.75rem; display: flex; align-items: center; gap: 6px; }
-.tag span { cursor: pointer; font-weight: bold; color: var(--accent); transition: 0.2s;}
-.tag span:hover { color: #fff; }
-
-/* Structure de Grille Unique (Anciennement .equipment-grid, .diet-grid, .style-grid) */
-
+/* Grilles et Cartes (Équipements, Régimes, Modes de Cuisson factorisés) */
 .equipment-grid, .diet-grid, .style-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
 }
-
-/* Style de Carte Commun (Anciennement .equip-card, .diet-card, .style-card) */
-
-.equip-card, .diet-card, .style-card {
-    background: rgba(0, 0, 0, 0.15);
-    border: 1px solid var(--border-glass);
-    padding: 12px;
-    border-radius: 8px;
-    text-align: center;
-    cursor: pointer;
-    font-size: 0.85rem;
-    font-weight: 500;
-    user-select: none;
+.equip-card, .diet-card, .style-card { 
+    background: rgba(0,0,0,0.15); 
+    border: 1px solid var(--border-glass); 
+    padding: 12px; 
+    border-radius: 8px; 
+    text-align: center; 
+    cursor: pointer; 
+    font-size: 0.85rem; 
+    font-weight: 500; 
+    user-select: none; 
     transition: 0.2s;
 }
-
-/* État Actif Commun (Anciennement .active de chaque catégorie) */
-
-.equip-card.active, .diet-card.active, .style-card.active {
-    border-color: var(--accent);
-    background: rgba(244, 63, 94, 0.1);
-    color: var(--accent);
-    box-shadow: 0 0 10px var(--accent-glow);
+.equip-card.active, .diet-card.active, .style-card.active { 
+    border-color: var(--accent); 
+    background: rgba(244, 63, 94, 0.1); 
+    color: var(--accent); 
+    box-shadow: 0 0 10px var(--accent-glow); 
 }
 
-/* Sliders */
+/* Boutons de l'interface */
+.btn-primary { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent) 0%, #ff7eb3 100%); border: none; border-radius: 10px; color: white; font-size: 1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px var(--accent-glow); transition: 0.2s;}
+.btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(244, 63, 94, 0.5); }
+.btn-primary:disabled { background: #334155 !important; color: #64748b; box-shadow: none; cursor: not-allowed; }
+
+.controls-panel-top { position: absolute; top: 0; right: 0; }
+.control-btn { background: rgba(0,0,0,0.1); border: 1px solid var(--border-glass); color: var(--text-light); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: 0.2s; font-weight: 600;}
+.control-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.theme-btn { background: transparent; border: 1px solid var(--border-glass); color: var(--text-muted); padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; margin-bottom: 10px; transition: 0.2s;}
+.theme-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-light); }
+.aside-footer { margin-top: auto; padding-top: 15px; }
+
+/* ==========================================================================
+   5. COMPOSANTS DE FORMULAIRE (INPUTS, AUTOCOMPLETE & CURSEURS CHROMATIQUES)
+   ========================================================================== */
+.smart-input-container { position: relative; margin-bottom: 10px; }
+input[type="text"], textarea { width: 100%; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-glass); color: var(--text-light); padding: 12px; border-radius: 8px; font-size: 0.85rem; transition: 0.2s;}
+input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); }
+textarea { min-height: 90px; resize: none; }
+
+/* Liste d'autocomplétion des ingrédients */
+#autocomplete-list { list-style: none; background: rgba(15, 23, 42, 0.98); border: 1px solid var(--border-glass); border-radius: 8px; max-height: 180px; overflow-y: auto; position: absolute; width: 100%; z-index: 1000; box-shadow: 0 12px 30px rgba(0,0,0,0.7); }
+#autocomplete-list li { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.85rem; color: #fff; transition: 0.2s;}
+#autocomplete-list li:hover { background: var(--accent); color: white; }
+
+/* Tags d'ingrédients validés */
+.tags-output-zone { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; min-height: 5px; }
+.tag { background: rgba(244, 63, 94, 0.12); border: 1px solid var(--accent); color: var(--text-light); padding: 4px 10px; border-radius: 16px; font-size: 0.75rem; display: flex; align-items: center; gap: 6px; }
+.tag span { cursor: pointer; font-weight: bold; color: var(--accent); transition: 0.2s;}
+.tag span:hover { color: #fff; }
+
+/* Curseurs standards */
 .slider-container { margin-bottom: 12px; }
 .slider-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
 .badge-val { background: var(--accent); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
 input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
 .ticks { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; padding: 0 2px; }
 
-/* ==========================================================================
-   4. RÃ‰SULTAT (DROITE)
-   ========================================================================== */
-.result-panel { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px 20px; gap: 20px; position: relative; overflow: hidden; background: radial-gradient(circle at 50% 50%, rgba(26, 31, 41, 0.3) 0%, rgba(0,0,0,0) 100%); }
-.variation-tabs { display: flex; gap: 10px; z-index: 10; margin-bottom: 10px; flex-wrap: wrap; justify-content: center; }
-.var-tab { padding: 8px 18px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-glass); color: var(--text-light); border-radius: 20px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: 0.2s;}
-.var-tab:hover { background: rgba(255,255,255,0.05); }
-.var-tab.active-variant { background: var(--accent); border-color: var(--accent); color: white; box-shadow: 0 0 10px var(--accent-glow); }
+/* Cercle Chromatique des Saveurs */
+.chromatic-container { display: flex; justify-content: center; position: relative; height: 140px; align-items: center; margin-top: 10px; }
+.chromatic-wheel { width: 110px; height: 110px; border-radius: 50%; background: conic-gradient(#10b981 0deg 90deg, #f59e0b 90deg 180deg, #f43f5e 180deg 270deg, #3b82f6 270deg 360deg); position: relative; cursor: crosshair; box-shadow: inset 0 0 15px rgba(0,0,0,0.5), 0 4px 15px rgba(0,0,0,0.3); }
+.wheel-center { position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px; background: var(--panel-bg); border-radius: 50%; z-index: 1; transition: background 0.4s;}
+.chromatic-cursor { position: absolute; width: 10px; height: 10px; background: white; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; box-shadow: 0 0 8px rgba(255,255,255,1); pointer-events: none; }
+.chromatic-labels { position: absolute; width: 110px; height: 110px; pointer-events: none; }
+.label { position: absolute; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.5px; text-align: center; }
+.l-acide { top: -18px; left: 50%; transform: translateX(-50%); color: var(--healthy-color); width: max-content; }
+.l-sale { top: 50%; right: -42px; transform: translateY(-50%); color: var(--fat-color); width: max-content; }
+.l-sucre { bottom: -18px; left: 50%; transform: translateX(-50%); color: var(--accent); width: max-content; }
+.l-amer { top: 50%; left: -46px; transform: translateY(-50%); color: var(--protein-color); width: max-content; }
+.flavor-output { text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 10px; }
 
+/* ==========================================================================
+   6. VISUELS D'ASSIETTES ET EFFETS DE LUMIÈRE (PLATE ENGINE)
+   ========================================================================== */
 .plate-wrapper { position: relative; width: 200px; height: 200px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
 .plate { width: 180px; height: 180px; border-radius: 50%; background: #1e2330; border: 6px solid #141720; box-shadow: 0 15px 40px rgba(0,0,0,0.5); z-index: 2; overflow: hidden; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
 .plate:hover { transform: scale(1.05); }
-.plate-texture { width: 100%; height: 100%; background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80'); background-size: cover; background-position: center; filter: brightness(0.9); }
+.plate-texture { width: 100%; height: 100%; background-size: cover; background-position: center; filter: brightness(0.9); }
 .plate-glow { position: absolute; width: 210px; height: 230px; border-radius: 50%; z-index: 1; opacity: 0; filter: blur(20px); mix-blend-mode: screen; transition: opacity 0.5s ease, transform 0.5s ease; transform: scale(0.9); }
 .plate-glow.active { opacity: 1; transform: scale(1.05); }
+
+/* Halos colorés selon la déclinaison */
 .glow-original { background: radial-gradient(circle, rgba(244,63,94,0.4) 0%, rgba(0,0,0,0) 70%); }
 .glow-healthy { background: radial-gradient(circle, rgba(16,185,129,0.4) 0%, rgba(0,0,0,0) 70%); }
 .glow-protein { background: radial-gradient(circle, rgba(59,130,246,0.4) 0%, rgba(0,0,0,0) 70%); }
 .glow-gourmand { background: radial-gradient(circle, rgba(245,158,11,0.4) 0%, rgba(0,0,0,0) 70%); }
 
-/* Layout Recette Mr. Cook */
+/* ==========================================================================
+   7. STRUCTURE DÉTAILLÉE DE LA FICHE RECETTE (MR. COOK LAYOUT)
+   ========================================================================== */
 .mrcook-layout { background: rgba(26, 29, 36, 0.4); border: 1px solid var(--border-glass); padding: 25px; border-radius: 14px; width: 100%; max-width: 850px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); opacity: 0; transform: translateY(15px); transition: all 0.4s ease; display: none; }
 .mrcook-layout.show { opacity: 1; transform: translateY(0); display: block; }
 .recipe-top-header { text-align: center; margin-bottom: 25px;}
 .recipe-top-header h2 { font-size: 1.5rem; border: none; margin-bottom: 5px; color: var(--accent); font-family: 'Poppins', sans-serif;}
 
-/* Context Pills */
-.recipe-context-bar { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-.context-pill { background: rgba(0,0,0,0.2); border: 1px solid var(--border-glass); padding: 6px 14px; border-radius: 30px; font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
-.context-pill span.val { color: var(--text-light); font-weight: 600; }
+/* Onglets de variations de fiches */
+.variation-tabs { display: flex; gap: 10px; z-index: 10; margin-bottom: 10px; flex-wrap: wrap; justify-content: center; }
+.var-tab { padding: 8px 18px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-glass); color: var(--text-light); border-radius: 20px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: 0.2s;}
+.var-tab:hover { background: rgba(255,255,255,0.05); }
+.var-tab.active-variant { background: var(--accent); border-color: var(--accent); color: white; box-shadow: 0 0 10px var(--accent-glow); }
 
+/* Blocs de Données Temporels & Badges nutritionnels */
 .mrcook-time-row { display: flex; gap: 10px; margin: 15px 0; }
 .time-box { flex: 1; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid var(--border-glass); text-align: center; }
 .time-box span { display: block; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; font-weight: 600;}
 .time-box strong { font-size: 1.1rem; color: var(--text-light); font-family: 'Poppins', sans-serif;}
 .total-time-box { border-color: var(--accent); background: rgba(244, 63, 94, 0.05); }
 .total-time-box strong { color: var(--accent); }
+
+.recipe-context-bar { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.context-pill { background: rgba(0,0,0,0.2); border: 1px solid var(--border-glass); padding: 6px 14px; border-radius: 30px; font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+.context-pill span.val { color: var(--text-light); font-weight: 600; }
 
 .meta-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; justify-content: center;}
 .badge { padding: 5px 12px; border-radius: 12px; font-weight: 700; font-size: 0.8rem; background: rgba(0,0,0,0.2); border: 1px solid; }
@@ -216,35 +265,41 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .macro-lip { border-color: #eab308; color: #eab308; }
 .macro-glu { border-color: #3b82f6; color: #3b82f6; }
 
+/* Colonnes de Contenu (Checklists et Préparation) */
 .recipe-split-columns { display: grid; grid-template-columns: 1fr 1.4fr; gap: 35px; }
 @media (max-width: 800px) { .recipe-split-columns { grid-template-columns: 1fr; gap: 20px; } }
 
 .mrcook-left-column h3, .mrcook-right-column h3 { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 15px; border: none; padding: 0; letter-spacing: 0.5px; font-family: 'Poppins', sans-serif;}
 .mrcook-left-column h3 small, .mrcook-right-column h3 small { font-size: 0.75rem; text-transform: none; color: var(--text-muted); font-weight: normal; }
 
+/* Compteur de portions */
 .portions-widget { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 8px; width: fit-content; margin-bottom: 15px; font-size: 0.9rem; border: 1px solid var(--border-glass); }
 .portions-widget button { background: transparent; border: 1px solid var(--border-glass); color: var(--text-light); width: 26px; height: 26px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s;}
 .portions-widget button:hover { background: rgba(255,255,255,0.1); border-color: var(--text-light); }
 
-/* Checkboxes Custom (Issu du Code 2) */
+/* Checkboxes interactives des ingrédients */
 .ingredients-checklist { list-style: none; }
 .ingredients-checklist li { display: flex; gap: 10px; font-size: 0.9rem; margin-bottom: 10px; color: var(--text-light); align-items: flex-start; cursor: pointer; user-select: none; transition: opacity 0.2s; }
 .ingredients-checklist li.checked-item { text-decoration: line-through; opacity: 0.4; color: var(--text-muted); }
 
 .custom-checkbox { width: 18px; height: 18px; border: 2px solid var(--text-muted); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; transition: 0.2s;}
 .checked-item .custom-checkbox { background: var(--accent); border-color: var(--accent); }
-.checked-item .custom-checkbox::after { content: "âœ“"; color: white; font-size: 11px; font-weight: bold; }
+.checked-item .custom-checkbox::after { content: "✓"; color: white; font-size: 11px; font-weight: bold; }
 
+/* Étapes de préparation interactives */
 .steps-ordered-list p { font-size: 0.95rem; line-height: 1.6; margin-bottom: 15px; color: var(--text-light); padding-left: 12px; border-left: 2px solid var(--border-glass); cursor: pointer; user-select: none; transition: opacity 0.2s; }
 .steps-ordered-list p.checked-step { text-decoration: line-through; opacity: 0.3; border-left-color: var(--accent); color: var(--text-muted); }
 .steps-ordered-list p strong { color: var(--accent); display: block; margin-bottom: 2px; transition: color 0.2s; font-family: 'Poppins', sans-serif;}
 .steps-ordered-list p.checked-step strong { color: var(--text-muted); }
 
+/* Écrans de Chargement (Animations) */
 .loader-container { text-align: center; margin-top: 50px; }
 .spinner { width: 40px; height: 40px; border: 3px solid var(--border-glass); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 20px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* 🌟 DESIGN DE LA FENÊTRE MODALE DE SÉLECTION (Inspiré de l'image) */
+/* ==========================================================================
+   8. INTERFACES MODALES (FENÊTRE D'INSPIRATIONS EN 2 ÉTAPES)
+   ========================================================================== */
 .modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -259,14 +314,10 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
     opacity: 1;
     transition: opacity 0.3s ease;
 }
-
-.modal-overlay.hidden-mode {
-    opacity: 0;
-    pointer-events: none;
-}
+.modal-overlay.hidden-mode { opacity: 0; pointer-events: none; }
 
 .ideas-modal {
-    background: #111111; /* Fond très sombre */
+    background: #111111;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     width: 100%;
@@ -278,45 +329,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
     gap: 20px;
 }
 
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    font-size: 1.1rem;
-    color: #ffffff;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
-}
-
-#close-modal-btn {
-    background: rgba(255,255,255,0.05);
-    border: none;
-    color: #94a3b8;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.2s;
-}
-
-#close-modal-btn:hover {
-    background: rgba(255,255,255,0.15);
-    color: #fff;
-}
-
-.ideas-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
+.ideas-list { display: flex; flex-direction: column; gap: 12px; }
 .idea-card {
     background: #1a1a1a;
     border: 1px solid rgba(255,255,255,0.05);
@@ -328,53 +341,71 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
     flex-direction: column;
     gap: 6px;
 }
+.idea-card:hover { background: #222222; border-color: rgba(255,255,255,0.2); transform: translateY(-2px); }
+.idea-card h4 { font-size: 1rem; color: #ffffff; font-family: 'Poppins', sans-serif; font-weight: 600; }
+.idea-card p { font-size: 0.85rem; color: #a1a1aa; line-height: 1.4; }
 
-.idea-card:hover {
-    background: #222222;
-    border-color: rgba(255,255,255,0.2);
-    transform: translateY(-2px);
+.retry-btn { background: transparent; border: none; color: #94a3b8; font-size: 0.85rem; cursor: pointer; text-align: center; margin-top: 5px; transition: color 0.2s; }
+.retry-btn:hover { color: #ffffff; text-decoration: underline; }
+
+/* ==========================================================================
+   9. OPTIONS DE FIN DE FICHE (MODULES DE PARTAGE & SCREENSHOTS FIN)
+   ========================================================================== */
+.recipe-actions-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 30px;
+    width: 100%;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-glass);
 }
 
-.idea-card h4 {
-    font-size: 1rem;
-    color: #ffffff;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
-}
-
-.idea-card p {
-    font-size: 0.85rem;
-    color: #a1a1aa;
-    line-height: 1.4;
-}
-
-.retry-btn {
-    background: transparent;
+/* Base stylisée commune des boutons fins utilitaires */
+.btn-share-premium, .btn-export-premium {
+    width: 100%;
     border: none;
-    color: #94a3b8;
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
     font-size: 0.85rem;
+    font-weight: 600;
     cursor: pointer;
-    text-align: center;
-    margin-top: 5px;
-    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    user-select: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.retry-btn:hover {
-    color: #ffffff;
-    text-decoration: underline;
+/* 📸 Capture d'Écran Fine & Dégradée Lumineuse */
+.btn-share-premium {
+    padding: 10px 16px;
+    background: linear-gradient(135deg, var(--accent) 0%, #ff7eb3 100%);
+    color: white;
+    box-shadow: 0 4px 10px var(--accent-glow);
+}
+.btn-share-premium:hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 6px 14px rgba(244, 63, 94, 0.45);
+    filter: brightness(1.05);
+}
+.btn-share-premium:active {
+    transform: translateY(0);
 }
 
-.result-panel { 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: flex-start; 
-    padding: 40px 20px; 
-    gap: 20px; 
-    position: relative; 
-    background: radial-gradient(circle at 50% 50%, rgba(26, 31, 41, 0.3) 0%, rgba(0,0,0,0) 100%); 
-    
-    /* 🌟 AJOUTE CES DEUX LIGNES POUR LIBÉRER LE SCROLL DE LA RECETTE : */
-    max-height: 100vh;
-    overflow-y: auto; 
+/* 📋 Exportation de la Liste vers Notes (Glassmorphism assorti) */
+.btn-export-premium {
+    padding: 9px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-glass);
+    color: var(--text-muted);
+}
+.btn-export-premium:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--text-light);
+}
+.btn-export-premium:active {
+    background: rgba(255, 255, 255, 0.02);
 }
