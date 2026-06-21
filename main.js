@@ -2,7 +2,6 @@ window.activeRecipePack = null;
 window.currentSelectedVariant = "original";
 window.currentPortions = 1;
 
-// Variables globales pour l'affichage final dans la recette
 window.currentHardware = "Aucun";
 window.currentComplex = "Amateur";
 window.currentRisk = "Original";
@@ -136,15 +135,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const ideasModal = document.getElementById("ideas-modal-overlay");
     const ideasContainer = document.getElementById("ideas-container");
 
-    /**
-     * Boîte à outils : Lit toute l'interface à l'instant T
-     * et pré-fabrique le bloc de données complet pour l'envoyer au serveur.
-     */
     function getFormPayload() {
         const hardware = [];
         document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
 
-        // Conversion sécurisée du Set unifié d'ingrédients en tableau
         let ingredientsPack = [];
         if (isAdvanced && document.getElementById('t-ing')?.checked && window.selectedIngredients) {
             ingredientsPack = Array.from(window.selectedIngredients);
@@ -158,7 +152,6 @@ document.addEventListener("DOMContentLoaded", () => {
         window.currentComplex = document.getElementById('t-sliders')?.checked && timeVal ? timeVal.innerText : "Amateur";
         window.currentRisk = document.getElementById('t-sliders')?.checked && riskVal ? riskVal.innerText : "Original";
 
-        // Définition adaptative du prompt système selon le niveau du chef choisi
         let levelPromptSystem = "Créer une recette équilibrée et accessible.";
         if (window.currentComplex === "Fast Food") {
             levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef street-food. La recette doit être extrêmement rapide (moins de 20 minutes), réconfortante, gourmande (comfort food), utilisant un minimum de vaisselle (One-Pot/One-Pan) et des techniques de cuisson simples et directes.";
@@ -169,7 +162,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const activeDietCard = document.querySelector('.diet-card.active');
         const activeStyleCard = document.querySelector('.style-card.active');
 
-        // Retourne le gros bloc d'objet structuré complet
         return {
             mode: isAdvanced ? "Avancé" : "Simple",
             simple_prompt: !isAdvanced ? (document.getElementById("simple-prompt-input")?.value || "Repas surprise du chef") : "Auto_FoodPairing",
@@ -195,7 +187,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (loadingText) loadingText.innerText = "Recherche de 3 idées de plats...";
         loadingDisplay?.classList.remove("hidden-mode");
 
-        // Appel de notre boîte à outils pour récupérer tout le gros payload d'un coup !
         const payload = getFormPayload();
 
         try {
@@ -237,9 +228,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (loadingText) loadingText.innerText = "Le Chef élabore vos sauces et techniques...";
         loadingDisplay?.classList.remove("hidden-mode");
 
-        // On récupère à nouveau notre gros payload mis à jour
         const payload = getFormPayload();
-        payload.selected_idea = selectedTitle; // On lui greffe juste le titre choisi
+        payload.selected_idea = selectedTitle;
 
         try {
             const response = await fetch(`${BACKEND_URL}/generate-recipe`, {
@@ -273,7 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Assignation globale des déclencheurs
+    // Assignation des déclencheurs de base
     if (btnGenerate) btnGenerate.addEventListener("click", fetchIdeas);
     
     document.getElementById("close-modal-btn")?.addEventListener("click", () => {
@@ -284,6 +274,87 @@ document.addEventListener("DOMContentLoaded", () => {
         ideasModal?.classList.add("hidden-mode");
         fetchIdeas();
     });
+
+    // ==========================================================================
+    // ACTION 1 : SCREENSHOT DE LA FICHE + OUVERTURE DU VOLET DE PARTAGE NATIF
+    // ==========================================================================
+    const btnShareScreenshot = document.getElementById("btn-share-screenshot");
+    if (btnShareScreenshot) {
+        btnShareScreenshot.addEventListener("click", async () => {
+            const recipeCard = document.getElementById("recipeCard");
+            if (!recipeCard || !window.activeRecipePack) return;
+
+            const oldText = btnShareScreenshot.innerText;
+            btnShareScreenshot.innerText = "⚡ Génération du visuel...";
+
+            try {
+                const canvas = await html2canvas(recipeCard, {
+                    useCORS: true,          
+                    backgroundColor: "#07090e", 
+                    scale: 2                
+                });
+
+                canvas.toBlob(async (blob) => {
+                    if (!blob) return;
+                    const file = new File([blob], "ma-recette-le-gourmet.png", { type: "image/png" });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: "Ma recette Le Gourmet 🍳",
+                            text: "Regarde le plat moléculaire que je viens de concevoir !"
+                        });
+                    } else {
+                        const link = document.createElement("a");
+                        link.download = "ma-recette-le-gourmet.png";
+                        link.href = canvas.toDataURL();
+                        link.click();
+                    }
+                }, "image/png");
+
+            } catch (err) {
+                console.error("Erreur lors de la capture de la fiche :", err);
+            } finally {
+                btnShareScreenshot.innerText = oldText;
+            }
+        });
+    }
+
+    // ==========================================================================
+    // ACTION 2 : COPIE DE LA LISTE DE COURSES + REDIRECTION VERS LES NOTES
+    // ==========================================================================
+    const btnExportNotes = document.getElementById("btn-export-notes");
+    if (btnExportNotes) {
+        btnExportNotes.addEventListener("click", async () => {
+            if (!window.activeRecipePack) return;
+            const data = window.activeRecipePack[window.currentSelectedVariant];
+            if (!data) return;
+
+            let textOutput = `🛒 LISTE DE COURSES : ${data.title.toUpperCase()}\n`;
+            textOutput += `Pour ${window.currentPortions} personne(s)\n\n`;
+            
+            data.ingredients.forEach(ing => {
+                const qty = (parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '');
+                textOutput += `- [ ] ${qty} ${ing.unit} ${ing.name}\n`;
+            });
+
+            try {
+                await navigator.clipboard.writeText(textOutput);
+
+                if (navigator.share) {
+                    await navigator.share({
+                        text: textOutput
+                    });
+                } else {
+                    const oldText = btnExportNotes.innerText;
+                    btnExportNotes.innerText = "Copié ! Prêt à coller dans vos notes ✓";
+                    setTimeout(() => { btnExportNotes.innerText = oldText; }, 2500);
+                }
+            } catch (err) {
+                console.error("Erreur d'exportation vers les notes :", err);
+            }
+        });
+    }
 });
 
 // --- 11. LE MOTEUR DE RENDU INTERACTIF DOUBLE COLONNE MR. COOK ---
@@ -306,7 +377,6 @@ window.renderSelectedVariant = function(variantKey) {
     document.getElementById("c-time").innerText = data.cook_time ? `${data.cook_time} min` : "--";
     document.getElementById("t-time").innerText = data.total_time ? `${data.total_time} min` : "--";
     
-    // Remplissage dynamique des Context Pills
     const rEquip = document.getElementById("r-equip");
     if(rEquip) rEquip.innerText = window.currentHardware;
     const rComplex = document.getElementById("r-complex");
@@ -322,7 +392,6 @@ window.renderSelectedVariant = function(variantKey) {
         document.getElementById("r-glu").innerText = data.macros.glucides || "--";
     }
 
-    // Rendu dynamique de la checklist des Ingrédients (Avec Checkboxes Custom)
     const ingList = document.getElementById("ingredientsList");
     if (ingList && data.ingredients && Array.isArray(data.ingredients)) {
         ingList.innerHTML = data.ingredients.map(ing => {
@@ -335,14 +404,11 @@ window.renderSelectedVariant = function(variantKey) {
         });
     }
 
-    // Rendu dynamique des étapes ordonnées de cuisson
     const stepsList = document.getElementById("stepsList");
     if (stepsList && data.steps) {
         if (Array.isArray(data.steps)) {
             stepsList.innerHTML = data.steps.map((step, idx) => `<p><strong>Étape ${idx + 1} :</strong> ${step}</p>`).join('');
-            stepsList.querySelectorAll('p').forEach(p => {
-                p.addEventListener('click', () => p.classList.toggle('checked-step'));
-            });
+            stepsList.querySelectorAll('p').forEach(p => p.addEventListener('click', () => p.classList.toggle('checked-step')));
         } else {
             stepsList.innerHTML = `<p>${data.steps}</p>`;
         }
