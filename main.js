@@ -17,23 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- 2. MODE SIMPLE / AVANCÉ ---
-    let isAdvanced = false;
-    const modeBtn = document.getElementById("mode-toggle");
-    const simpleMode = document.getElementById("simple-mode");
-    const advancedMode = document.getElementById("advanced-mode");
-
-    if (modeBtn && simpleMode && advancedMode) {
-        modeBtn.addEventListener("click", () => {
-            isAdvanced = !isAdvanced;
-            simpleMode.classList.toggle("hidden-mode", isAdvanced);
-            advancedMode.classList.toggle("hidden-mode", !isAdvanced);
-            modeBtn.innerText = isAdvanced ? "Mode Simple 📝" : "Mode Avancé ⚙️";
-            document.getElementById("autocomplete-list")?.classList.add("hidden-mode");
-        });
-    }
-
-    // --- 3. GESTION DES INTERRUPTEURS (LINKAGES ON/OFF) ---
+    // --- 2. GESTION DES INTERRUPTEURS (LINKAGES ON/OFF) ---
     const linkages = [
         { t: 't-ing', c: 'c-ing' },
         { t: 't-fusion', c: 'c-fusion' },
@@ -52,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // --- 4. SÉLECTION DES CARDS ÉQUIPEMENT (MULTIPLE) ---
+    // --- 3. SÉLECTION DES CARDS ÉQUIPEMENT (MULTIPLE) ---
     document.querySelectorAll('.equip-card').forEach(card => {
         card.addEventListener('click', () => {
             const equipContainer = document.getElementById('c-equip');
@@ -62,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 5. SÉLECTION DES CARDS RÉGIME ALIMENTAIRE (UNIQUE / TOGGLE) ---
+    // --- 4. SÉLECTION DES CARDS RÉGIME ALIMENTAIRE (UNIQUE / TOGGLE) ---
     document.querySelectorAll('.diet-card').forEach(card => {
         card.addEventListener('click', () => {
             const dietContainer = document.getElementById('c-diet');
@@ -77,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 6. SÉLECTION DES CARDS MODE DE CUISSON (UNIQUE / TOGGLE) ---
+    // --- 5. SÉLECTION DES CARDS MODE DE CUISSON (UNIQUE / TOGGLE) ---
     document.querySelectorAll('.style-card').forEach(card => {
         card.addEventListener('click', () => {
             const dietContainer = document.getElementById('c-diet');
@@ -92,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 7. VALEURS TEXTUELLES DES SLIDERS ---
+    // --- 6. VALEURS TEXTUELLES DES SLIDERS ---
     const riskLevels = { "1": "Classique", "2": "Original", "3": "Aventure" };
     const timeLevels = { "1": "Fast Food", "2": "Amateur", "3": "Guide Michelin" };
 
@@ -103,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('time-val').innerText = timeLevels[e.target.value];
     });
 
-    // --- 8. ÉCOUTEURS D'ONGLETS VARIATIONS ---
+    // --- 7. ÉCOUTEURS D'ONGLETS VARIATIONS ---
     document.querySelectorAll(".var-tab").forEach(tab => {
         tab.addEventListener("click", () => {
             if (!window.activeRecipePack) return;
@@ -114,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 9. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
+    // --- 8. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
     document.getElementById("btn-plus")?.addEventListener("click", () => {
         window.currentPortions++;
         document.getElementById("portion-display").innerText = window.currentPortions;
@@ -128,7 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // --- 10. LA LOGIQUE EN 2 ÉTAPES (IDÉES -> RECETTE) ---
+    // --- 9. CONFIGURATION ET AGGRÉGATION DU PAYLOAD ---
     const btnGenerate = document.getElementById("btn-generate");
     const loadingDisplay = document.getElementById("loading-display");
     const loadingText = loadingDisplay?.querySelector("h2");
@@ -140,8 +124,12 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
 
         let ingredientsPack = [];
-        if (isAdvanced && document.getElementById('t-ing')?.checked && window.selectedIngredients) {
-            ingredientsPack = Array.from(window.selectedIngredients);
+        // Correction de la fusion des Sets d'ingrédients de l'inventaire
+        if (document.getElementById('t-ing')?.checked && window.selectedIngredients) {
+            if (window.selectedIngredients["anti-gaspi"]) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
+            if (window.selectedIngredients.base) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.base));
+            if (window.selectedIngredients.protein) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.protein));
+            if (window.selectedIngredients.vegetable) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.vegetable));
         }
         if (ingredientsPack.length === 0) ingredientsPack = ["Auto_FoodPairing"];
 
@@ -154,25 +142,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let levelPromptSystem = "Créer une recette équilibrée et accessible.";
         if (window.currentComplex === "Fast Food") {
-            levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef street-food. La recette doit être extrêmement rapide (moins de 20 minutes), réconfortante, gourmande (comfort food), utilisant un minimum de vaisselle (One-Pot/One-Pan) et des techniques de cuisson simples et directes.";
+            levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef street-food. La recette doit être extrêmement rapide (moins de 20 minutes), réconfortante, gourmande (comfort food), utilisant un minimum de vaisselle (One-Pot/One-Pan) and des techniques de cuisson simples et directes.";
         } else if (window.currentComplex === "Guide Michelin") {
-            levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef triplement étoilé au Guide Michelin. La recette doit être technique, sophistiquée, avec des textures contrastées, une réduction de sauce ou une émulsion recherchée, des découpes ultra-précises et un guide de dressage artistique minutieux digne de la haute gastronomie.";
+            levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef triplement étoilé au Guide Michelin. La recette doit être technique, sophistiquée, avec des textures contrastées, une réduction de sauce ou une émulsion recherchée, des découpes ultra-précises and un guide de dressage artistique minutieux digne de la haute gastronomie.";
         }
 
         const activeDietCard = document.querySelector('.diet-card.active');
         const activeStyleCard = document.querySelector('.style-card.active');
 
         return {
-            mode: isAdvanced ? "Avancé" : "Simple",
-            simple_prompt: !isAdvanced ? (document.getElementById("simple-prompt-input")?.value || "Repas surprise du chef") : "Auto_FoodPairing",
+            mode: "Avancé",
+            simple_prompt: document.getElementById("simple-prompt-input")?.value || "Repas surprise du chef",
             ingredients: ingredientsPack,
-            fusion: isAdvanced ? (document.getElementById("t-fusion")?.checked ? (document.getElementById("fusion-input")?.value || "Auto_FoodPairing") : "Auto_FoodPairing") : "Auto_FoodPairing",
-            equipment: isAdvanced ? (document.getElementById("t-equip")?.checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"]) : ["Auto_FoodPairing"],
+            fusion: document.getElementById("t-fusion")?.checked ? (document.getElementById("fusion-input")?.value || "Auto_FoodPairing") : "Auto_FoodPairing",
+            equipment: document.getElementById("t-equip")?.checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"],
             risk: window.currentRisk,
             time: window.currentComplex,
             chef_instruction_directive: levelPromptSystem,
-            diet_profile: isAdvanced && document.getElementById('t-diet')?.checked ? (activeDietCard ? activeDietCard.dataset.diet : "Aucun") : "Aucun",
-            cooking_style: isAdvanced && document.getElementById('t-diet')?.checked ? (activeStyleCard ? activeStyleCard.dataset.style : "Libre") : "Libre"
+            diet_profile: document.getElementById('t-diet')?.checked ? (activeDietCard ? activeDietCard.dataset.diet : "Aucun") : "Aucun",
+            cooking_style: document.getElementById('t-diet')?.checked ? (activeStyleCard ? activeStyleCard.dataset.style : "Libre") : "Libre"
         };
     }
 
@@ -185,7 +173,10 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("variationTabsZone").style.display = "none";
         
         if (loadingText) loadingText.innerText = "Recherche de 3 idées de plats...";
-        loadingDisplay?.classList.remove("hidden-mode");
+        if (loadingDisplay) {
+            loadingDisplay.classList.remove("hidden-mode");
+            loadingDisplay.style.display = "block";
+        }
 
         const payload = getFormPayload();
 
@@ -209,12 +200,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     ideasContainer.appendChild(card);
                 });
                 
-                loadingDisplay?.classList.add("hidden-mode");
+                if (loadingDisplay) {
+                    loadingDisplay.classList.add("hidden-mode");
+                    loadingDisplay.style.display = "none"; 
+                }
                 ideasModal?.classList.remove("hidden-mode");
             }
         } catch (err) {
             console.error(err);
-            loadingDisplay?.classList.add("hidden-mode");
+            if (loadingDisplay) {
+                loadingDisplay.classList.add("hidden-mode");
+                loadingDisplay.style.display = "none";
+            }
             alert("Erreur de connexion avec le laboratoire. Veuillez réessayer.");
         } finally {
             btnGenerate.disabled = false;
@@ -224,9 +221,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ÉTAPE 2 : Concoction finale de la recette complète basée sur le choix
     async function fetchFullRecipe(selectedTitle) {
-        ideasModal?.classList.add("hidden-mode");
+        if (ideasModal) ideasModal.classList.add("hidden-mode");
         if (loadingText) loadingText.innerText = "Le Chef élabore vos sauces et techniques...";
-        loadingDisplay?.classList.remove("hidden-mode");
+        if (loadingDisplay) {
+            loadingDisplay.classList.remove("hidden-mode");
+            loadingDisplay.style.display = "block";
+        }
 
         const payload = getFormPayload();
         payload.selected_idea = selectedTitle;
@@ -259,13 +259,12 @@ document.addEventListener("DOMContentLoaded", () => {
             if (stepsList) stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu structurer la recette complète.</p>";
             document.getElementById("recipeCard").classList.add("show");
         } finally {
-            // Désactivation propre du loader
             if (loadingDisplay) {
                 loadingDisplay.classList.add("hidden-mode");
                 loadingDisplay.style.display = "none"; 
             }
         }
-    } 
+    }
 
     // Assignation des déclencheurs de base
     if (btnGenerate) btnGenerate.addEventListener("click", fetchIdeas);
