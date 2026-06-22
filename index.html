@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr" data-theme="dark">
 <head>
@@ -93,7 +92,7 @@
 
                     </div>
                 </div>
-                   
+                    
                 <div class="control-group section">
                     <div class="group-header">
                         <h2>Paramètres de création</h2>
@@ -121,12 +120,8 @@
         </aside>
 
         <main class="result-panel glass">
-            <div class="variation-tabs" id="variationTabsZone" style="display: none;">
-                <button class="var-tab active-variant" data-variant="original">✨ Original</button>
-                <button class="var-tab" data-variant="healthy">🌿 Healthy</button>
-                <button class="var-tab" data-variant="protein">💪 Protéiné</button>
-                <button class="var-tab" data-variant="gourmand">🧀 Gourmand / Fat</button>
-            </div>
+            
+            <h2 id="recipeTitle" class="main-recipe-title">Laboratoire Culinaire</h2>
 
             <div class="plate-wrapper" id="interactivePlateWrapper">
                 <div id="glow-original" class="plate-glow glow-original active"></div>
@@ -136,12 +131,18 @@
                 
                 <div class="plate" id="mainPlate">
                     <div class="plate-texture" id="plateImage"></div>
+                    <div id="plate-placeholder" class="plate-placeholder-content">
+                        <span class="placeholder-icon">🔮</span>
+                        <p>Fusionne tes ingrédients pour lancer l'alchimie...</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="mrcook-layout" id="recipeCard">
-                <div class="recipe-top-header">
-                    at</button>
+            <div class="variation-tabs" id="variationTabsZone" style="display: none;">
+                <button class="var-tab active-variant" data-variant="original">✨ Original</button>
+                <button class="var-tab" data-variant="healthy">🌿 Healthy</button>
+                <button class="var-tab" data-variant="protein">💪 Protéiné</button>
+                <button class="var-tab" data-variant="gourmand">🧀 Gourmand / Fat</button>
             </div>
 
             <div class="mrcook-layout" id="recipeCard">
@@ -198,12 +199,12 @@
                 </div>
             </div>
 
-            <div id="id="loading-display" class="hidden-mode loader-container">
+            <div id="loading-display" class="hidden-mode loader-container">
                 <h2>Alchimie Culinaire en Cours...</h2>
                 <div class="spinner"></div>
             </div>
         </main>
-</div>
+    </div>
 
     <div id="ideas-modal-overlay" class="modal-overlay hidden-mode">
         <div class="ideas-modal glass">
