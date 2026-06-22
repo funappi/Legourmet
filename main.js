@@ -259,10 +259,12 @@ document.addEventListener("DOMContentLoaded", () => {
             if (stepsList) stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu structurer la recette complète.</p>";
             document.getElementById("recipeCard").classList.add("show");
         } finally {
-            loadingDisplay?.classList.add("hidden-mode");
+            // Désactivation propre du loader
+            if (loadingDisplay) {
+                loadingDisplay.classList.add("hidden-mode");
+                loadingDisplay.style.display = "none"; 
+            }
         }
-    }
-
     // Assignation des déclencheurs de base
     if (btnGenerate) btnGenerate.addEventListener("click", fetchIdeas);
     
