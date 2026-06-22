@@ -200,21 +200,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     card.addEventListener("click", () => fetchFullRecipe(idea.title));
                     ideasContainer.appendChild(card);
                 });
-                
-                if (loadingDisplay) {
-                    loadingDisplay.classList.add("hidden-mode");
-                    loadingDisplay.style.display = "none"; 
-                }
                 ideasModal?.classList.remove("hidden-mode");
             }
         } catch (err) {
             console.error(err);
-            if (loadingDisplay) {
-                loadingDisplay.classList.add("hidden-mode");
-                loadingDisplay.style.display = "none";
-            }
             alert("Erreur de connexion avec le laboratoire. Veuillez réessayer.");
         } finally {
+            // Sécurisé ici : Le chargement se coupe TOUJOURS dès que le réseau s'arrête
+            if (loadingDisplay) {
+                loadingDisplay.classList.add("hidden-mode");
+                loadingDisplay.style.display = "none"; 
+            }
             btnGenerate.disabled = false;
             btnGenerate.innerText = "Cuisiner 🚀";
         }
@@ -365,9 +361,6 @@ document.addEventListener("DOMContentLoaded", () => {
 window.renderSelectedVariant = function(variantKey) {
     const data = window.activeRecipePack[variantKey];
     if (!data) return;
-
-    // Ligne ajoutée pour masquer le texte d'attente à la matérialisation
-    document.getElementById("plate-placeholder")?.setHTML ? document.getElementById("plate-placeholder").style.display = "none" : document.getElementById("plate-placeholder")?.classList.add("hidden-mode");
 
     document.querySelectorAll('.plate-glow').forEach(g => g.classList.remove('active'));
     const glowTarget = document.getElementById(`glow-${variantKey}`);
