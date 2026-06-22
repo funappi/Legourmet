@@ -124,7 +124,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
 
         let ingredientsPack = [];
-        // Correction de la fusion des Sets d'ingrédients de l'inventaire
         if (document.getElementById('t-ing')?.checked && window.selectedIngredients) {
             if (window.selectedIngredients["anti-gaspi"]) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
             if (window.selectedIngredients.base) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.base));
@@ -171,6 +170,8 @@ document.addEventListener("DOMContentLoaded", () => {
         btnGenerate.innerText = "Recherche d'inspirations...";
         document.getElementById("recipeCard").classList.remove("show");
         document.getElementById("variationTabsZone").style.display = "none";
+        
+        document.getElementById("recipeTitle").innerText = "Analyse moléculaire...";
         
         if (loadingText) loadingText.innerText = "Recherche de 3 idées de plats...";
         if (loadingDisplay) {
@@ -364,6 +365,9 @@ document.addEventListener("DOMContentLoaded", () => {
 window.renderSelectedVariant = function(variantKey) {
     const data = window.activeRecipePack[variantKey];
     if (!data) return;
+
+    // Ligne ajoutée pour masquer le texte d'attente à la matérialisation
+    document.getElementById("plate-placeholder")?.setHTML ? document.getElementById("plate-placeholder").style.display = "none" : document.getElementById("plate-placeholder")?.classList.add("hidden-mode");
 
     document.querySelectorAll('.plate-glow').forEach(g => g.classList.remove('active'));
     const glowTarget = document.getElementById(`glow-${variantKey}`);
