@@ -265,6 +265,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 loadingDisplay.style.display = "none"; 
             }
         }
+    } 
+
     // Assignation des déclencheurs de base
     if (btnGenerate) btnGenerate.addEventListener("click", fetchIdeas);
     
