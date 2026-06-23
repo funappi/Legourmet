@@ -278,81 +278,36 @@ document.addEventListener("DOMContentLoaded", () => {
         fetchIdeas();
     });
 
-    // ==========================================================================
-    // ACTION 1 : SCREENSHOT ULTRA-COMPLET (ASSIETTE + TITRE + RECETTE ENTIÈRE)
+  // ==========================================================================
+    // ACTION 1 : SCREENSHOT NATIF (PROPRE ET SANS CLONAGE)
     // ==========================================================================
     const btnShareScreenshot = document.getElementById("btn-share-screenshot");
     if (btnShareScreenshot) {
         btnShareScreenshot.addEventListener("click", async () => {
             const recipeCard = document.getElementById("recipeCard");
-            const plateWrapper = document.querySelector(".plate-wrapper");
             if (!recipeCard || !window.activeRecipePack) return;
 
             const oldText = btnShareScreenshot.innerText;
             btnShareScreenshot.innerText = "⚡ Immortalisation du moment...";
 
+            // 1. On masque uniquement les boutons du bas le temps de la photo
+            const actionsContainer = recipeCard.querySelector(".recipe-actions-container");
+            if (actionsContainer) actionsContainer.style.display = "none";
+
             try {
-                // 1. Création d'un studio de capture temporaire et masqué hors-écran
-                const screenshotStudio = document.createElement("div");
-                screenshotStudio.style.position = "fixed";
-                screenshotStudio.style.top = "0";
-                screenshotStudio.style.left = "-9999px";
-                screenshotStudio.style.width = "800px"; // Largeur idéale pour un rendu net sur mobile
-                screenshotStudio.style.height = "auto";
-                screenshotStudio.style.background = "#07090e"; // Maintien de ton fond premium sombre
-                screenshotStudio.style.padding = "40px 30px";
-                screenshotStudio.style.borderRadius = "24px";
-                screenshotStudio.style.display = "flex";
-                screenshotStudio.style.flexDirection = "column";
-                screenshotStudio.style.alignItems = "center";
-                screenshotStudio.style.gap = "25px";
-                screenshotStudio.style.boxSizing = "border-box";
-
-                // 2. Duplication de l'assiette et activation forcée de son halo lumineux d'ambiance
-                if (plateWrapper) {
-                    const plateClone = plateWrapper.cloneNode(true);
-                    const activeGlowId = `glow-${window.currentSelectedVariant}`;
-                    plateClone.querySelectorAll('.plate-glow').forEach(glow => {
-                        if (glow.id === activeGlowId) {
-                            glow.classList.add('active');
-                            glow.style.opacity = "1";
-                            glow.style.transform = "scale(1.05)";
-                        } else {
-                            glow.style.opacity = "0";
-                        }
-                    });
-                    screenshotStudio.appendChild(plateClone);
-                }
-
-                // 3. Duplication de la fiche recette et suppression des limites de hauteur (Anti-coupure du titre)
-                const cardClone = recipeCard.cloneNode(true);
-                cardClone.style.display = "block";
-                cardClone.style.opacity = "1";
-                cardClone.style.transform = "none";
-                cardClone.style.width = "100%";
-                cardClone.style.maxHeight = "none"; 
-                cardClone.style.overflow = "visible";
-
-                // Nettoyage esthétique : On enlève le conteneur des boutons d'action sur la photo finale
-                const actionsContainer = cardClone.querySelector(".recipe-actions-container");
-                if (actionsContainer) actionsContainer.remove();
-
-                screenshotStudio.appendChild(cardClone);
-                document.body.appendChild(screenshotStudio);
-
-                // 4. Déclenchement de la photographie haute définition (CORS activé pour les images distantes)
-                const canvas = await html2canvas(screenshotStudio, {
-                    useCORS: true,          // Indispensable pour capturer l'illustration Pollinations/Unsplash
+                // 2. Prise de la photo directe de la carte HTML
+                const canvas = await html2canvas(recipeCard, {
+                    useCORS: true,          
                     allowTaint: false,
-                    backgroundColor: "#07090e",
-                    scale: 2,               // Force la netteté et la haute définition
+                    backgroundColor: "#11141a", // Fond uni sombre pour un beau rendu d'image
+                    scale: 2,               
                     logging: false
                 });
 
-                // Nettoyage du DOM
-                document.body.removeChild(screenshotStudio);
+                // 3. On réaffiche les boutons instantanément
+                if (actionsContainer) actionsContainer.style.display = "flex";
 
-                // 5. Conversion et routage vers l'API de partage native du smartphone
+                // 4. Envoi vers le menu natif de partage
                 canvas.toBlob(async (blob) => {
                     if (!blob) return;
                     const file = new File([blob], "ma-recette-le-gourmet.png", { type: "image/png" });
@@ -364,7 +319,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             text: "Je partage ma recette elle est pas secrète !"
                         });
                     } else {
-                        // Secours si tu testes sur ordinateur (Téléchargement de l'image)
                         const link = document.createElement("a");
                         link.download = "ma-recette-le-gourmet.png";
                         link.href = canvas.toDataURL();
@@ -373,7 +327,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 }, "image/png");
 
             } catch (err) {
-                console.error("L'ingrédients ne veulent pas être pris en photo respecter leur intimité (réessayer) :", err);
+                console.error("Erreur capture :", err);
+                if (actionsContainer) actionsContainer.style.display = "flex"; // Sécurité anti-bug
             } finally {
                 btnShareScreenshot.innerText = oldText;
             }
