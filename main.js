@@ -124,6 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
 
         let ingredientsPack = [];
+        // Correction de la fusion des Sets d'ingrédients de l'inventaire
         if (document.getElementById('t-ing')?.checked && window.selectedIngredients) {
             if (window.selectedIngredients["anti-gaspi"]) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
             if (window.selectedIngredients.base) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.base));
@@ -171,8 +172,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("recipeCard").classList.remove("show");
         document.getElementById("variationTabsZone").style.display = "none";
         
-        document.getElementById("recipeTitle").innerText = "Analyse moléculaire...";
-        
         if (loadingText) loadingText.innerText = "Recherche de 3 idées de plats...";
         if (loadingDisplay) {
             loadingDisplay.classList.remove("hidden-mode");
@@ -200,17 +199,21 @@ document.addEventListener("DOMContentLoaded", () => {
                     card.addEventListener("click", () => fetchFullRecipe(idea.title));
                     ideasContainer.appendChild(card);
                 });
+                
+                if (loadingDisplay) {
+                    loadingDisplay.classList.add("hidden-mode");
+                    loadingDisplay.style.display = "none"; 
+                }
                 ideasModal?.classList.remove("hidden-mode");
             }
         } catch (err) {
             console.error(err);
-            alert("Erreur de connexion avec le laboratoire. Veuillez réessayer.");
-        } finally {
-            // Sécurisé ici : Le chargement se coupe TOUJOURS dès que le réseau s'arrête
             if (loadingDisplay) {
                 loadingDisplay.classList.add("hidden-mode");
-                loadingDisplay.style.display = "none"; 
+                loadingDisplay.style.display = "none";
             }
+            alert("Le Chef a confondu le câble réseau avec un spaghetti ! Veuillez réessayer.");
+        } finally {
             btnGenerate.disabled = false;
             btnGenerate.innerText = "Cuisiner 🚀";
         }
@@ -251,9 +254,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         } catch (err) {
             console.error(err);
-            document.getElementById("recipeTitle").innerText = "Surcharge Moléculaire";
+            document.getElementById("recipeTitle").innerText = "En chasse après les ingrédients";
             const stepsList = document.getElementById("stepsList");
-            if (stepsList) stepsList.innerHTML = "<p>L'intelligence artificielle n'a pas pu structurer la recette complète.</p>";
+            if (stepsList) stepsList.innerHTML = "<p>Le Chef est actuellement en train de courir après un poulet virtuel , réessayer</p>";
             document.getElementById("recipeCard").classList.add("show");
         } finally {
             if (loadingDisplay) {
@@ -276,24 +279,80 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ==========================================================================
-    // ACTION 1 : SCREENSHOT DE LA FICHE + OUVERTURE DU VOLET DE PARTAGE NATIF
+    // ACTION 1 : SCREENSHOT ULTRA-COMPLET (ASSIETTE + TITRE + RECETTE ENTIÈRE)
     // ==========================================================================
     const btnShareScreenshot = document.getElementById("btn-share-screenshot");
     if (btnShareScreenshot) {
         btnShareScreenshot.addEventListener("click", async () => {
             const recipeCard = document.getElementById("recipeCard");
+            const plateWrapper = document.querySelector(".plate-wrapper");
             if (!recipeCard || !window.activeRecipePack) return;
 
             const oldText = btnShareScreenshot.innerText;
-            btnShareScreenshot.innerText = "⚡ Génération du visuel...";
+            btnShareScreenshot.innerText = "⚡ Immortalisation du moment...";
 
             try {
-                const canvas = await html2canvas(recipeCard, {
-                    useCORS: true,          
-                    backgroundColor: "#07090e", 
-                    scale: 2                
+                // 1. Création d'un studio de capture temporaire et masqué hors-écran
+                const screenshotStudio = document.createElement("div");
+                screenshotStudio.style.position = "fixed";
+                screenshotStudio.style.top = "0";
+                screenshotStudio.style.left = "-9999px";
+                screenshotStudio.style.width = "800px"; // Largeur idéale pour un rendu net sur mobile
+                screenshotStudio.style.height = "auto";
+                screenshotStudio.style.background = "#07090e"; // Maintien de ton fond premium sombre
+                screenshotStudio.style.padding = "40px 30px";
+                screenshotStudio.style.borderRadius = "24px";
+                screenshotStudio.style.display = "flex";
+                screenshotStudio.style.flexDirection = "column";
+                screenshotStudio.style.alignItems = "center";
+                screenshotStudio.style.gap = "25px";
+                screenshotStudio.style.boxSizing = "border-box";
+
+                // 2. Duplication de l'assiette et activation forcée de son halo lumineux d'ambiance
+                if (plateWrapper) {
+                    const plateClone = plateWrapper.cloneNode(true);
+                    const activeGlowId = `glow-${window.currentSelectedVariant}`;
+                    plateClone.querySelectorAll('.plate-glow').forEach(glow => {
+                        if (glow.id === activeGlowId) {
+                            glow.classList.add('active');
+                            glow.style.opacity = "1";
+                            glow.style.transform = "scale(1.05)";
+                        } else {
+                            glow.style.opacity = "0";
+                        }
+                    });
+                    screenshotStudio.appendChild(plateClone);
+                }
+
+                // 3. Duplication de la fiche recette et suppression des limites de hauteur (Anti-coupure du titre)
+                const cardClone = recipeCard.cloneNode(true);
+                cardClone.style.display = "block";
+                cardClone.style.opacity = "1";
+                cardClone.style.transform = "none";
+                cardClone.style.width = "100%";
+                cardClone.style.maxHeight = "none"; 
+                cardClone.style.overflow = "visible";
+
+                // Nettoyage esthétique : On enlève le conteneur des boutons d'action sur la photo finale
+                const actionsContainer = cardClone.querySelector(".recipe-actions-container");
+                if (actionsContainer) actionsContainer.remove();
+
+                screenshotStudio.appendChild(cardClone);
+                document.body.appendChild(screenshotStudio);
+
+                // 4. Déclenchement de la photographie haute définition (CORS activé pour les images distantes)
+                const canvas = await html2canvas(screenshotStudio, {
+                    useCORS: true,          // Indispensable pour capturer l'illustration Pollinations/Unsplash
+                    allowTaint: false,
+                    backgroundColor: "#07090e",
+                    scale: 2,               // Force la netteté et la haute définition
+                    logging: false
                 });
 
+                // Nettoyage du DOM
+                document.body.removeChild(screenshotStudio);
+
+                // 5. Conversion et routage vers l'API de partage native du smartphone
                 canvas.toBlob(async (blob) => {
                     if (!blob) return;
                     const file = new File([blob], "ma-recette-le-gourmet.png", { type: "image/png" });
@@ -302,9 +361,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         await navigator.share({
                             files: [file],
                             title: "Ma recette Le Gourmet 🍳",
-                            text: "Regarde le plat moléculaire que je viens de concevoir !"
+                            text: "Je partage ma recette elle est pas secrète !"
                         });
                     } else {
+                        // Secours si tu testes sur ordinateur (Téléchargement de l'image)
                         const link = document.createElement("a");
                         link.download = "ma-recette-le-gourmet.png";
                         link.href = canvas.toDataURL();
@@ -313,13 +373,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 }, "image/png");
 
             } catch (err) {
-                console.error("Erreur lors de la capture de la fiche :", err);
+                console.error("L'ingrédients ne veulent pas être pris en photo respecter leur intimité (réessayer) :", err);
             } finally {
                 btnShareScreenshot.innerText = oldText;
             }
         });
     }
-
     // ==========================================================================
     // ACTION 2 : COPIE DE LA LISTE DE COURSES + REDIRECTION VERS LES NOTES
     // ==========================================================================
@@ -347,11 +406,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                 } else {
                     const oldText = btnExportNotes.innerText;
-                    btnExportNotes.innerText = "Copié ! Prêt à coller dans vos notes ✓";
+                    btnExportNotes.innerText = "Copié ! Va faire les courses ont a faim";
                     setTimeout(() => { btnExportNotes.innerText = oldText; }, 2500);
                 }
             } catch (err) {
-                console.error("Erreur d'exportation vers les notes :", err);
+                console.error("Tu sais même pas recopier (réessaye) :", err);
             }
         });
     }
