@@ -124,25 +124,24 @@
 
         <main class="result-panel">
             
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 850px; margin-bottom: 15px;">
-                <div style="width: 44px; display: flex; justify-content: flex-start;">
-                    <button id="btn-favorite-recipe" class="btn-fav-star" style="display: none;" aria-label="Mettre en favori">☆</button>
-                </div>
+            <!-- 🌟 BARRE DE NAVIGATION : Étoile GAUCHE - Onglets CENTRE - Bookmark DROITE -->
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 850px; margin-bottom: 15px; gap: 10px;">
+                
+                <button id="btn-favorite-recipe" class="btn-fav-star" style="display: none;" aria-label="Mettre en favori">☆</button>
 
-                <div class="variation-tabs" id="variationTabsZone" style="display: none; margin-bottom: 0; flex: 1; justify-content: center;">
+                <div class="variation-tabs" id="variationTabsZone" style="display: none; margin-bottom: 0; flex: 1;">
                     <button class="var-tab active-variant" data-variant="original">✨ Original</button>
                     <button class="var-tab" data-variant="healthy">🌿 Healthy</button>
                     <button class="var-tab" data-variant="protein">💪 Protéiné</button>
                     <button class="var-tab" data-variant="gourmand">🧀 Gourmand</button>
                 </div>
 
-                <div style="width: 44px; display: flex; justify-content: flex-end;">
-                    <button id="btn-open-favorites" class="btn-bookmark" aria-label="Voir mes favoris" title="Mes recettes sauvegardées">
-                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                    </button>
-                </div>
+                <button id="btn-open-favorites" class="btn-bookmark" aria-label="Voir mes favoris" title="Mes recettes sauvegardées">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </button>
+
             </div>
 
             <div class="mrcook-layout" id="recipeCard">
