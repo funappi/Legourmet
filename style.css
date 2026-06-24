@@ -54,7 +54,7 @@ body {
 }
 
 /* ==========================================================================
-   3. SQUELETTE ET AGENCEMENT DE L'APPLICATION (LA PORTE COULISSANTE)
+   3. SQUELETTE ET AGENCEMENT DE L'APPLICATION
    ========================================================================== */
 .app-container {
     display: flex;
@@ -74,7 +74,6 @@ body {
     overflow-y: auto;
 }
 
-/* MENU BURGER (Positionné strictement en haut à gauche) */
 .burger-btn {
     position: fixed;
     top: 20px;
@@ -90,36 +89,28 @@ body {
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    
-    /* Disparition par défaut */
     opacity: 0;
     pointer-events: none;
     transform: translateX(-20px);
     transition: all 0.3s ease;
 }
 
-.burger-btn:hover { 
-    background: var(--accent); 
-    color: white; 
-}
+.burger-btn:hover { background: var(--accent); color: white; }
 
-/* Reste visible UNIQUEMENT quand la sidebar est fermée */
 .app-container.sidebar-collapsed .burger-btn {
     opacity: 1;
     pointer-events: auto;
     transform: translateX(0);
 }
 
-/* AJUSTEMENT POUR ÉVITER QUE L'ÉTOILE OU LE TITRE NE COULISSE SOUS LE BURGER SUR PETIT ÉCRAN */
 @media (max-width: 750px) {
     .recipe-top-header {
         position: relative;
-        padding-top: 20px; /* Crée un espace de respiration pour éviter les conflits de clics */
+        padding-top: 20px;
         margin-top: 10px;
     }
 }
 
-/* BOUTON FERMER DANS LE MENU LATÉRAL */
 .close-sidebar-btn {
     background: rgba(0,0,0,0.2);
     border: 1px solid var(--border-glass);
@@ -145,9 +136,9 @@ body {
     flex-direction: column;
     position: relative;
     overflow-x: hidden;
-    /* Recalcul pour occuper exactement 35% de la largeur totale de l'écran */
-    width: 35vw;
-    min-width: 320px; /* Sécurité pour ne pas écraser les sliders sur petits écrans PC */
+    /* 🌟 CORRECTION LARGEUR PC : Fixée à 380px au lieu de 35% de l'écran */
+    width: 380px; 
+    min-width: 380px; 
     flex-shrink: 0;
     margin: 20px;
     height: calc(100vh - 40px);
@@ -155,7 +146,7 @@ body {
 }
 
 .app-container.sidebar-collapsed .tools-panel {
-    margin-left: -440px; 
+    margin-left: -420px; /* -380px + -40px marge */
     opacity: 0;
     pointer-events: none;
 }
@@ -174,7 +165,6 @@ body {
     background: radial-gradient(circle at 50% 50%, rgba(26, 31, 41, 0.3) 0%, rgba(0,0,0,0) 100%); 
 }
 
-/* Typographies de Structure */
 header { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; position: relative; }
 h1 { font-size: 1.6rem; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); font-family: 'Poppins', sans-serif;}
 h2 { font-size: 0.9rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); margin-bottom: 15px; font-family: 'Poppins', sans-serif;}
@@ -183,7 +173,7 @@ h2 { font-size: 0.9rem; border-bottom: 1px solid var(--border-glass); padding-bo
 .hidden-mode { display: none !important; }
 
 /* ==========================================================================
-   4. COMPOSANTS INTERACTIFS COMMUNS (BUTTONS, CARDS, SWITCHES)
+   4. COMPOSANTS INTERACTIFS COMMUNS
    ========================================================================== */
 .group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .group-content { transition: opacity 0.3s ease, filter 0.3s ease; }
@@ -213,7 +203,7 @@ input:checked + .slider:before { transform: translateX(18px); }
 .aside-footer { margin-top: auto; padding-top: 15px; }
 
 /* ==========================================================================
-   5. COMPOSANTS DE FORMULAIRE (INPUTS, AUTOCOMPLETE & CURSEURS)
+   5. COMPOSANTS DE FORMULAIRE
    ========================================================================== */
 input[type="text"], textarea { width: 100%; background: rgba(0, 0, 0, 0.15); border: 1px solid var(--border-glass); color: var(--text-light); padding: 12px; border-radius: 8px; font-size: 0.85rem; transition: 0.2s;}
 input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); }
@@ -235,18 +225,18 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .ticks { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; padding: 0 2px; }
 
 /* ==========================================================================
-   6. VISUELS D'ASSIETTES ET EFFETS NÉONS ADOUCIS
+   6. VISUELS D'ASSIETTES CARREES ET EFFETS NÉONS ADOUCIS
    ========================================================================== */
 .plate-wrapper { 
     position: relative; 
-    width: min(100%, 300px);
+    width: min(100%, 350px);
     aspect-ratio: 1; 
     display: flex; align-items: center; justify-content: center; 
     margin-bottom: 20px; 
 }
 .plate { 
-    width: 90%; height: 90%; 
-    border-radius: 20%; 
+    width: 100%; height: 100%; 
+    border-radius: 20px; 
     background: #1e2330; 
     border: 6px solid #141720; 
     box-shadow: 0 15px 40px rgba(0,0,0,0.5); 
@@ -258,7 +248,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .plate-glow { 
     position: absolute; 
     width: 105%; height: 105%; 
-    border-radius: 20%; 
+    border-radius: 20px; 
     z-index: 1; opacity: 0; 
     filter: blur(45px); 
     mix-blend-mode: screen; transition: opacity 0.5s ease, transform 0.5s ease; transform: scale(0.9); 
@@ -271,24 +261,29 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .glow-gourmand { background: radial-gradient(circle, rgba(245,158,11,0.4) 0%, rgba(0,0,0,0) 70%); }
 
 /* ==========================================================================
-   7. STRUCTURE DÉTAILLÉE DE LA FICHE RECETTE (MR. COOK LAYOUT)
+   7. STRUCTURE DÉTAILLÉE DE LA FICHE RECETTE
    ========================================================================== */
 .mrcook-layout { background: rgba(26, 29, 36, 0.4); border: 1px solid var(--border-glass); padding: 25px; border-radius: 14px; width: 100%; max-width: 850px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); opacity: 0; transform: translateY(15px); transition: all 0.4s ease; display: none; }
 .mrcook-layout.show { opacity: 1; transform: translateY(0); display: block; }
-.recipe-top-header { text-align: center; margin-bottom: 25px;}
+.recipe-top-header { text-align: center; margin-bottom: 25px; width: 100%; }
 
-.btn-bookmark {
+/* 🌟 BOUTONS JUMEAUX (ÉTOILE FAVORIS ET BOOKMARK) */
+.btn-bookmark, .btn-fav-star {
     background: rgba(0,0,0,0.2);
     border: 1px solid var(--border-glass);
     color: var(--text-muted);
     border-radius: 12px;
-    padding: 8px 12px;
+    width: 44px; /* Fixe la largeur/hauteur pour un carré parfait */
+    height: 44px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: 0.2s;
+    flex-shrink: 0; /* Empêche le bouton de s'écraser */
 }
+
+/* Hover du Bookmark */
 .btn-bookmark:hover {
     color: var(--accent);
     background: rgba(244, 63, 94, 0.1);
@@ -296,11 +291,22 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
     transform: scale(1.05);
 }
 
-.btn-fav-star { background: transparent; border: none; color: #475569; font-size: 2rem; cursor: pointer; transition: transform 0.2s, color 0.2s; padding: 0 10px; }
-.btn-fav-star:hover { transform: scale(1.2); }
-.btn-fav-star.is-favorite { color: #facc15 !important; text-shadow: 0 0 15px rgba(250, 204, 21, 0.5); }
+/* Hover et État Actif de l'Étoile */
+.btn-fav-star { font-size: 1.4rem; padding-bottom: 3px; }
+.btn-fav-star:hover {
+    color: #facc15;
+    background: rgba(250, 204, 21, 0.1);
+    border-color: #facc15;
+    transform: scale(1.05);
+}
+.btn-fav-star.is-favorite {
+    color: #facc15 !important;
+    border-color: #facc15;
+    background: rgba(250, 204, 21, 0.1);
+    text-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
+}
 
-.variation-tabs { display: flex; gap: 10px; z-index: 10; margin-bottom: 10px; flex-wrap: wrap; justify-content: center; }
+.variation-tabs { display: flex; gap: 10px; z-index: 10; flex-wrap: wrap; justify-content: center; }
 .var-tab { padding: 8px 18px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-glass); color: var(--text-light); border-radius: 20px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: 0.2s;}
 .var-tab:hover { background: rgba(255,255,255,0.05); }
 .var-tab.active-variant { background: var(--accent); border-color: var(--accent); color: white; box-shadow: 0 0 10px var(--accent-glow); }
@@ -335,7 +341,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .ingredients-checklist { list-style: none; }
 .ingredients-checklist li { display: flex; gap: 10px; font-size: 0.9rem; margin-bottom: 10px; color: var(--text-light); align-items: flex-start; cursor: pointer; user-select: none; transition: opacity 0.2s; }
 .ingredients-checklist li.checked-item { text-decoration: line-through; opacity: 0.4; color: var(--text-muted); }
-.ingredients-checklist custom-checkbox { width: 16px; height: 16px; border: 1px solid var(--text-muted); border-radius: 4px; display: inline-block; margin-top: 4px; }
+.custom-checkbox { width: 18px; height: 18px; border: 2px solid var(--text-muted); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; transition: 0.2s;}
+.checked-item .custom-checkbox { background: var(--accent); border-color: var(--accent); }
+.checked-item .custom-checkbox::after { content: "✓"; color: white; font-size: 11px; font-weight: bold; }
 
 .steps-ordered-list p { font-size: 0.95rem; line-height: 1.6; margin-bottom: 15px; color: var(--text-light); padding-left: 12px; border-left: 2px solid var(--border-glass); cursor: pointer; user-select: none; transition: opacity 0.2s; }
 .steps-ordered-list p.checked-step { text-decoration: line-through; opacity: 0.3; border-left-color: var(--accent); color: var(--text-muted); }
@@ -381,15 +389,14 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .main-recipe-title { font-size: 1.8rem; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); text-shadow: 0 0 15px var(--accent-glow); font-family: 'Poppins', sans-serif; text-align: center; width: 100%; }
 
 /* ==========================================================================
-   10. OPTIMISATIONS ET RESPONSIVE (MOBILES & TABLETTES, BASCULE À 750px)
+   10. OPTIMISATIONS ET RESPONSIVE (MOBILES & TABLETTES, BASCULE À 1000px)
    ========================================================================== */
-@media (max-width: 750px) {
-    /* Adaptation de la hauteur adaptative dynamique (Anti-bug de barre d'adresse) */
+@media (max-width: 1000px) { 
     body { 
         height: auto;
         min-height: 100dvh;
         overflow-y: auto; 
-        overscroll-behavior: none; /* Bloque le rebond élastique parasite */
+        overscroll-behavior: none; 
     }
 
     .app-container { 
@@ -400,7 +407,6 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
         padding: 0;
     }
 
-    /* Le menu de gauche se transforme en une modale coulissante propre à 100% */
     .tools-panel { 
         position: fixed;
         top: 0;
@@ -411,47 +417,41 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
         margin: 0; 
         border-radius: 0;
         z-index: 10001;
-        -webkit-overflow-scrolling: touch; /* Défilement tactile fluide sur iOS */
+        -webkit-overflow-scrolling: touch; 
         transform: translateX(0);
         opacity: 1;
         transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
     }
 
-    /* Fermeture coulissante stricte sans superposition fantôme */
     .app-container.sidebar-collapsed .tools-panel { 
         transform: translateX(-100%);
         margin-left: 0;
         opacity: 0; 
     }
 
-    /* Panneau de droite étiré nativement sans boîte de contour */
     .result-panel {
         width: 100%;
         min-height: 100dvh;
-        padding: 80px 16px 40px 16px; /* Laisse de l'espace en haut pour le burger bouton */
+        padding: 80px 16px 40px 16px; 
         -webkit-overflow-scrolling: touch;
     }
 
-    /* On force l'assiette à rester proportionnelle sur petit écran */
     .plate-wrapper {
         width: min(100%, 260px);
         margin-bottom: 10px;
     }
 
-    /* Configuration de la grille de la recette sur une seule colonne */
     .recipe-split-columns {
         grid-template-columns: 1fr;
         gap: 24px;
         width: 100%;
     }
 
-    /* Amélioration de la réactivité tactile au clic */
     .equip-card, .diet-card, .style-card, .var-tab, .btn-primary, .control-btn, .close-sidebar-btn {
-        touch-action: manipulation; /* Supprime le délai matériel de 300ms sur smartphone */
-        padding: 14px 10px; /* Grossit la zone de frappe pour les doigts */
+        touch-action: manipulation; 
+        padding: 14px 10px; 
     }
 
-    /* Ajustement du bouton d'export notes et de partage */
     .recipe-actions-container {
         margin-top: 20px;
     }
