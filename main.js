@@ -145,14 +145,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const hardware = [];
         document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
 
+        // Vérification : L'utilisateur a-t-il saisi des ingrédients spécifiques ?
+        const hasIngredients = document.getElementById('t-ing')?.checked && window.selectedIngredients && 
+                               (window.selectedIngredients.base.size > 0 || 
+                                window.selectedIngredients.protein.size > 0 || 
+                                window.selectedIngredients.vegetable.size > 0 || 
+                                window.selectedIngredients["anti-gaspi"].size > 0);
+
         let ingredientsPack = [];
-        if (document.getElementById('t-ing')?.checked && window.selectedIngredients) {
+        if (hasIngredients) {
             if (window.selectedIngredients["anti-gaspi"]) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
             if (window.selectedIngredients.base) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.base));
             if (window.selectedIngredients.protein) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.protein));
             if (window.selectedIngredients.vegetable) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.vegetable));
+        } else {
+            ingredientsPack = ["Auto_FoodPairing"];
         }
-        if (ingredientsPack.length === 0) ingredientsPack = ["Auto_FoodPairing"];
 
         const riskVal = document.getElementById('risk-val');
         const timeVal = document.getElementById('time-val');
@@ -161,11 +169,19 @@ document.addEventListener("DOMContentLoaded", () => {
         window.currentComplex = document.getElementById('t-sliders')?.checked && timeVal ? timeVal.innerText : "Amateur";
         window.currentRisk = document.getElementById('t-sliders')?.checked && riskVal ? riskVal.innerText : "Original";
 
-        let levelPromptSystem = "Créer une recette équilibrée et accessible.";
+        // Définition de la directive selon la présence d'ingrédients
+        let levelPromptSystem = hasIngredients 
+            ? "INSTRUCTION STRICTE : Crée une recette en utilisant UNIQUEMENT les ingrédients fournis. N'ajoute AUCUN autre aliment majeur non listé (sauf sel, poivre, huile)."
+            : "INSTRUCTION CRÉATIVE : Crée une recette inspirée par la demande de l'utilisateur. Tu es libre d'ajouter les ingrédients nécessaires pour sublimer le plat.";
+
+        // Ajout du niveau de complexité
         if (window.currentComplex === "Fast Food") {
-            levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef street-food. La recette doit être extrêmement rapide (moins de 20 minutes), réconfortante, gourmande (comfort food), utilisant un minimum de vaisselle (One-Pot/One-Pan) and des techniques de cuisson simples et directes.";
+            levelPromptSystem += " Agis en chef street-food : recette extrêmement rapide (moins de 20 min), gourmande, utilisant un minimum de vaisselle (One-Pot).";
         } else if (window.currentComplex === "Guide Michelin") {
-            levelPromptSystem = "INSTRUCTION CRITIQUE : Agir en chef triplement étoilé au Guide Michelin. La recette doit être technique, sophistiquée, avec des textures contrastées, une réduction de sauce ou une émulsion recherchée, des découpes ultra-précises and un guide de dressage artistique minutieux digne de la haute gastronomie.";
+            levelPromptSystem += " Agis en chef triplement étoilé : recette technique, sophistiquée, avec des textures contrastées, réduction de sauce, dressage artistique minutieux.";
+        } else {
+            // Niveau Amateur
+            levelPromptSystem += " Agis en chef amateur passionné : propose une recette conviviale, équilibrée, avec des étapes claires et accessibles, parfaite pour un repas du quotidien.";
         }
 
         const activeDietCard = document.querySelector('.diet-card.active');
