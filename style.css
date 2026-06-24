@@ -14,19 +14,6 @@
     --protein-color: #3b82f6;
 }
 
-:root[data-theme="light"] {
-    --bg-dark: #f1f5f9;
-    --panel-bg: rgba(255, 255, 255, 0.75);
-    --text-light: #0f172a;
-    --text-muted: #64748b;
-    --border-glass: rgba(0, 0, 0, 0.08);
-    --accent: #e11d48;
-    --accent-glow: rgba(225, 29, 72, 0.25);
-    --healthy-color: #059669;
-    --fat-color: #d97706;
-    --protein-color: #2563eb;
-}
-
 /* ==========================================================================
    2. FONDATIONS (RESET, SCROLLBAR & TYPOGRAPHIE)
    ========================================================================== */
