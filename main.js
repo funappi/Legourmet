@@ -11,7 +11,7 @@ let favorisRecettes = JSON.parse(localStorage.getItem("lg_favs") || "[]");
 
 document.addEventListener("DOMContentLoaded", () => {
     
-    // --- O. INTERACTION FLUIDE DU MENU BURGER & CROIX INTÉGRÉE ---
+    // --- 0. INTERACTION FLUIDE DU MENU BURGER & CROIX INTÉGRÉE ---
     const appContainer = document.getElementById("mainAppContainer");
     const burgerToggle = document.getElementById("burger-toggle");
     const closeSidebarBtn = document.getElementById("close-sidebar-btn");
@@ -145,12 +145,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const hardware = [];
         document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
 
-        // Vérification : L'utilisateur a-t-il saisi des ingrédients spécifiques ?
+        // Vérification stricte et robuste de la présence d'ingrédients personnalisés
         const hasIngredients = document.getElementById('t-ing')?.checked && window.selectedIngredients && 
-                               (window.selectedIngredients.base.size > 0 || 
-                                window.selectedIngredients.protein.size > 0 || 
-                                window.selectedIngredients.vegetable.size > 0 || 
-                                window.selectedIngredients["anti-gaspi"].size > 0);
+                               (window.selectedIngredients.base?.size > 0 || 
+                                window.selectedIngredients.protein?.size > 0 || 
+                                window.selectedIngredients.vegetable?.size > 0 || 
+                                window.selectedIngredients["anti-gaspi"]?.size > 0);
 
         let ingredientsPack = [];
         if (hasIngredients) {
@@ -169,18 +169,17 @@ document.addEventListener("DOMContentLoaded", () => {
         window.currentComplex = document.getElementById('t-sliders')?.checked && timeVal ? timeVal.innerText : "Amateur";
         window.currentRisk = document.getElementById('t-sliders')?.checked && riskVal ? riskVal.innerText : "Original";
 
-        // Définition de la directive selon la présence d'ingrédients
+        // Définition de la directive selon la présence d'ingrédients (Logique issue du Bloc 1)
         let levelPromptSystem = hasIngredients 
             ? "INSTRUCTION STRICTE : Crée une recette en utilisant UNIQUEMENT les ingrédients fournis. N'ajoute AUCUN autre aliment majeur non listé (sauf sel, poivre, huile)."
             : "INSTRUCTION CRÉATIVE : Crée une recette inspirée par la demande de l'utilisateur. Tu es libre d'ajouter les ingrédients nécessaires pour sublimer le plat.";
 
-        // Ajout du niveau de complexité
+        // Raffinement de l'instruction par niveau de complexité de façon immersive
         if (window.currentComplex === "Fast Food") {
             levelPromptSystem += " Agis en chef street-food : recette extrêmement rapide (moins de 20 min), gourmande, utilisant un minimum de vaisselle (One-Pot).";
         } else if (window.currentComplex === "Guide Michelin") {
             levelPromptSystem += " Agis en chef triplement étoilé : recette technique, sophistiquée, avec des textures contrastées, réduction de sauce, dressage artistique minutieux.";
         } else {
-            // Niveau Amateur
             levelPromptSystem += " Agis en chef amateur passionné : propose une recette conviviale, équilibrée, avec des étapes claires et accessibles, parfaite pour un repas du quotidien.";
         }
 
@@ -292,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const origTab = document.querySelector('[data-variant="original"]');
             if (origTab) origTab.click();
 
-            // 🆕 CLAP DE FIN : Fermeture de la console de paramètres
+            // CLAP DE FIN : Fermeture de la console de paramètres
             if (appContainer) {
                 appContainer.classList.add("sidebar-collapsed");
             }
@@ -437,7 +436,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (appContainer) appContainer.classList.add("sidebar-collapsed");
     }
 
-    // 🆕 GESTION DE L'ÉTOILE FAVORIS
+    // GESTION DE L'ÉTOILE FAVORIS
     const btnFavStar = document.getElementById("btn-favorite-recipe");
     if (btnFavStar) {
         btnFavStar.addEventListener("click", () => {
@@ -455,7 +454,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 btnFavStar.innerHTML = "★";
                 btnFavStar.classList.add("is-favorite");
             }
-            // Enregistrement de l'action dans la mémoire du navigateur
             localStorage.setItem("lg_favs", JSON.stringify(favorisRecettes));
         });
     }
@@ -609,7 +607,7 @@ window.renderSelectedVariant = function(variantKey) {
         }
     }
 
-    // 🆕 MISE À JOUR VISUELLE DE L'ÉTOILE APRÈS GÉNÉRATION OU CHANGEMENT D'ONGLET
+    // MISE À JOUR VISUELLE DE L'ÉTOILE APRÈS GÉNÉRATION OU CHANGEMENT D'ONGLET
     const btnFavStar = document.getElementById("btn-favorite-recipe");
     if (btnFavStar) {
         btnFavStar.style.display = "inline-block";
