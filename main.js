@@ -6,8 +6,30 @@ window.currentHardware = "Aucun";
 window.currentComplex = "Amateur";
 window.currentRisk = "Original";
 
+// 🆕 INITIALISATION DU TIROIR DE MÉMOIRE LOCAL COMPATIBLE
+let favorisRecettes = JSON.parse(localStorage.getItem("lg_favs") || "[]");
+
 document.addEventListener("DOMContentLoaded", () => {
     
+    // --- O. INTERACTION FLUIDE DU MENU BURGER & CROIX INTÉGRÉE ---
+    const appContainer = document.getElementById("mainAppContainer");
+    const burgerToggle = document.getElementById("burger-toggle");
+    const closeSidebarBtn = document.getElementById("close-sidebar-btn");
+    
+    // Ouvrir le menu (Burger)
+    if (burgerToggle && appContainer) {
+        burgerToggle.addEventListener("click", () => {
+            appContainer.classList.remove("sidebar-collapsed");
+        });
+    }
+    
+    // Fermer le menu (Croix)
+    if (closeSidebarBtn && appContainer) {
+        closeSidebarBtn.addEventListener("click", () => {
+            appContainer.classList.add("sidebar-collapsed");
+        });
+    }
+
     // --- 1. ARCHITECTURE DES COULEURS & THÈMES ---
     const themeBtn = document.getElementById("theme-toggle");
     if (themeBtn) {
@@ -124,7 +146,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
 
         let ingredientsPack = [];
-        // Correction de la fusion des Sets d'ingrédients de l'inventaire
         if (document.getElementById('t-ing')?.checked && window.selectedIngredients) {
             if (window.selectedIngredients["anti-gaspi"]) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
             if (window.selectedIngredients.base) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.base));
@@ -172,6 +193,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("recipeCard").classList.remove("show");
         document.getElementById("variationTabsZone").style.display = "none";
         
+        const btnFavStar = document.getElementById("btn-favorite-recipe");
+        if (btnFavStar) btnFavStar.style.display = "none";
+        
         if (loadingText) loadingText.innerText = "Recherche de 3 idées de plats...";
         if (loadingDisplay) {
             loadingDisplay.classList.remove("hidden-mode");
@@ -212,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 loadingDisplay.classList.add("hidden-mode");
                 loadingDisplay.style.display = "none";
             }
-            alert("Le Chef a confondu le câble réseau avec un spaghetti ! Veuillez réessayer.");
+            alert("⚠️ Le Chef a confondu le câble réseau avec un spaghetti ! Veuillez réessayer.");
         } finally {
             btnGenerate.disabled = false;
             btnGenerate.innerText = "Cuisiner 🚀";
@@ -252,11 +276,22 @@ document.addEventListener("DOMContentLoaded", () => {
             const origTab = document.querySelector('[data-variant="original"]');
             if (origTab) origTab.click();
 
+            // 🆕 CLAP DE FIN : Fermeture de la console de paramètres
+            if (appContainer) {
+                appContainer.classList.add("sidebar-collapsed");
+            }
+
         } catch (err) {
             console.error(err);
-            document.getElementById("recipeTitle").innerText = "En chasse après les ingrédients";
+            document.getElementById("recipeTitle").innerText = "🔥 En chasse après les ingrédients";
             const stepsList = document.getElementById("stepsList");
-            if (stepsList) stepsList.innerHTML = "<p>Le Chef est actuellement en train de courir après un poulet virtuel , réessayer</p>";
+            if (stepsList) {
+                stepsList.innerHTML = `
+                    <p><strong>🚨 Alerte en cuisine :</strong> L'IA vient de renverser sa sauce magique directement sur la carte mère...</p>
+                    <p>Le Chef est actuellement en train de courir après un poulet virtuel dans l'arrière-boutique pour essayer de sauver ton assiette.</p>
+                    <p>Ne panique pas, essuie la table de cuisson et reclique sur le bouton <strong>Cuisiner 🚀</strong> !</p>
+                `;
+            }
             document.getElementById("recipeCard").classList.add("show");
         } finally {
             if (loadingDisplay) {
@@ -278,8 +313,139 @@ document.addEventListener("DOMContentLoaded", () => {
         fetchIdeas();
     });
 
-  // ==========================================================================
-    // ACTION 1 : SCREENSHOT NATIF (PROPRE ET SANS CLONAGE)
+    // ==========================================================================
+    // 🆕 GESTION DU BOOKMARK & MODALE DES FAVORIS SAUVEGARDÉS
+    // ==========================================================================
+    const favModal = document.getElementById("favorites-modal-overlay");
+    const btnOpenFavs = document.getElementById("btn-open-favorites");
+    const closeFavModalBtn = document.getElementById("close-fav-modal-btn");
+    const favsContainer = document.getElementById("favorites-container");
+
+    // Fonction pour afficher la liste des recettes favorites
+    function renderFavoritesModal() {
+        if (!favsContainer) return;
+        favsContainer.innerHTML = "";
+        
+        if (favorisRecettes.length === 0) {
+            favsContainer.innerHTML = "<p style='color: var(--text-muted); text-align: center; padding: 20px;'>Tu n'as aucune recette en favori pour le moment. Cuisines-en une et clique sur l'étoile !</p>";
+            return;
+        }
+
+        // On boucle sur la liste locale
+        favorisRecettes.forEach((fav, index) => {
+            const card = document.createElement("div");
+            card.className = "idea-card"; 
+            card.style.flexDirection = "row";
+            card.style.justifyContent = "space-between";
+            card.style.alignItems = "center";
+            
+            const titleSpan = document.createElement("h4");
+            titleSpan.innerText = fav.title;
+            titleSpan.style.margin = "0";
+            titleSpan.style.flex = "1";
+            
+            const actionDiv = document.createElement("div");
+            actionDiv.style.display = "flex";
+            actionDiv.style.gap = "10px";
+
+            // Bouton "Cuisiner" le favori
+            const btnLoad = document.createElement("button");
+            btnLoad.innerText = "Cuisiner";
+            btnLoad.className = "control-btn";
+            btnLoad.style.borderColor = "var(--healthy-color)";
+            btnLoad.style.color = "var(--healthy-color)";
+            btnLoad.onclick = (e) => {
+                e.stopPropagation();
+                loadFavoriteRecipe(fav);
+            };
+
+            // Bouton pour supprimer le favori
+            const btnDelete = document.createElement("button");
+            btnDelete.innerText = "✖";
+            btnDelete.className = "control-btn";
+            btnDelete.style.borderColor = "var(--accent)";
+            btnDelete.style.color = "var(--accent)";
+            btnDelete.onclick = (e) => {
+                e.stopPropagation();
+                favorisRecettes.splice(index, 1);
+                localStorage.setItem("lg_favs", JSON.stringify(favorisRecettes));
+                renderFavoritesModal(); 
+                
+                // Si la recette effacée était celle affichée à l'écran, on vide l'étoile
+                if (window.activeRecipePack && window.activeRecipePack.original.title === fav.title) {
+                    const btnFavStar = document.getElementById("btn-favorite-recipe");
+                    if (btnFavStar) {
+                        btnFavStar.innerHTML = "☆";
+                        btnFavStar.classList.remove("is-favorite");
+                    }
+                }
+            };
+
+            actionDiv.appendChild(btnLoad);
+            actionDiv.appendChild(btnDelete);
+            card.appendChild(titleSpan);
+            card.appendChild(actionDiv);
+            favsContainer.appendChild(card);
+        });
+    }
+
+    if (btnOpenFavs) {
+        btnOpenFavs.addEventListener("click", () => {
+            renderFavoritesModal();
+            if(favModal) favModal.classList.remove("hidden-mode");
+        });
+    }
+    
+    if (closeFavModalBtn) {
+        closeFavModalBtn.addEventListener("click", () => {
+            if(favModal) favModal.classList.add("hidden-mode");
+        });
+    }
+
+    // Chargement instantané d'une recette depuis la liste
+    function loadFavoriteRecipe(favObj) {
+        window.activeRecipePack = favObj.pack;
+        window.currentPortions = 1;
+        const portionDisplay = document.getElementById("portion-display");
+        if (portionDisplay) portionDisplay.innerText = "1";
+        
+        document.getElementById("variationTabsZone").style.display = "flex";
+        
+        if (favModal) favModal.classList.add("hidden-mode");
+        
+        // On clique artificiellement sur l'onglet original pour tout relancer
+        const origTab = document.querySelector('[data-variant="original"]');
+        if (origTab) origTab.click();
+        
+        // Rétracter le menu burger
+        if (appContainer) appContainer.classList.add("sidebar-collapsed");
+    }
+
+    // 🆕 GESTION DE L'ÉTOILE FAVORIS
+    const btnFavStar = document.getElementById("btn-favorite-recipe");
+    if (btnFavStar) {
+        btnFavStar.addEventListener("click", () => {
+            if (!window.activeRecipePack) return;
+            const currentTitle = document.getElementById("recipeTitle").innerText;
+            
+            const index = favorisRecettes.findIndex(fav => fav.title === currentTitle);
+            
+            if (index > -1) {
+                favorisRecettes.splice(index, 1); // Suppression
+                btnFavStar.innerHTML = "☆";
+                btnFavStar.classList.remove("is-favorite");
+            } else {
+                favorisRecettes.push({ title: currentTitle, pack: window.activeRecipePack }); // Ajout
+                btnFavStar.innerHTML = "★";
+                btnFavStar.classList.add("is-favorite");
+            }
+            // Enregistrement de l'action dans la mémoire du navigateur
+            localStorage.setItem("lg_favs", JSON.stringify(favorisRecettes));
+        });
+    }
+
+    // ==========================================================================
+    // ACTION 1 : SCREENSHOT NATIF ET SANS COUPURE
     // ==========================================================================
     const btnShareScreenshot = document.getElementById("btn-share-screenshot");
     if (btnShareScreenshot) {
@@ -290,24 +456,20 @@ document.addEventListener("DOMContentLoaded", () => {
             const oldText = btnShareScreenshot.innerText;
             btnShareScreenshot.innerText = "⚡ Immortalisation du moment...";
 
-            // 1. On masque uniquement les boutons du bas le temps de la photo
             const actionsContainer = recipeCard.querySelector(".recipe-actions-container");
             if (actionsContainer) actionsContainer.style.display = "none";
 
             try {
-                // 2. Prise de la photo directe de la carte HTML
                 const canvas = await html2canvas(recipeCard, {
                     useCORS: true,          
                     allowTaint: false,
-                    backgroundColor: "#11141a", // Fond uni sombre pour un beau rendu d'image
+                    backgroundColor: "#11141a", 
                     scale: 2,               
                     logging: false
                 });
 
-                // 3. On réaffiche les boutons instantanément
                 if (actionsContainer) actionsContainer.style.display = "flex";
 
-                // 4. Envoi vers le menu natif de partage
                 canvas.toBlob(async (blob) => {
                     if (!blob) return;
                     const file = new File([blob], "ma-recette-le-gourmet.png", { type: "image/png" });
@@ -328,12 +490,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
             } catch (err) {
                 console.error("Erreur capture :", err);
-                if (actionsContainer) actionsContainer.style.display = "flex"; // Sécurité anti-bug
+                if (actionsContainer) actionsContainer.style.display = "flex"; 
             } finally {
                 btnShareScreenshot.innerText = oldText;
             }
         });
     }
+
     // ==========================================================================
     // ACTION 2 : COPIE DE LA LISTE DE COURSES + REDIRECTION VERS LES NOTES
     // ==========================================================================
@@ -361,7 +524,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                 } else {
                     const oldText = btnExportNotes.innerText;
-                    btnExportNotes.innerText = "Copié ! Va faire les courses ont a faim";
+                    btnExportNotes.innerText = "Copié ! Va faire les courses on a faim";
                     setTimeout(() => { btnExportNotes.innerText = oldText; }, 2500);
                 }
             } catch (err) {
@@ -384,6 +547,8 @@ window.renderSelectedVariant = function(variantKey) {
     const plateImg = document.getElementById("plateImage");
     if(plateImg) {
         plateImg.style.backgroundImage = `url('https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${keywords}?width=400&height=400&nologo=true')`;
+        const placeholder = document.getElementById("plate-placeholder");
+        if(placeholder) placeholder.style.display = "none";
     }
 
     document.getElementById("recipeTitle").innerText = data.title || "Titre inconnu";
@@ -425,6 +590,20 @@ window.renderSelectedVariant = function(variantKey) {
             stepsList.querySelectorAll('p').forEach(p => p.addEventListener('click', () => p.classList.toggle('checked-step')));
         } else {
             stepsList.innerHTML = `<p>${data.steps}</p>`;
+        }
+    }
+
+    // 🆕 MISE À JOUR VISUELLE DE L'ÉTOILE APRÈS GÉNÉRATION OU CHANGEMENT D'ONGLET
+    const btnFavStar = document.getElementById("btn-favorite-recipe");
+    if (btnFavStar) {
+        btnFavStar.style.display = "inline-block";
+        const isFav = favorisRecettes.some(fav => fav.title === data.title);
+        if (isFav) {
+            btnFavStar.innerHTML = "★";
+            btnFavStar.classList.add("is-favorite");
+        } else {
+            btnFavStar.innerHTML = "☆";
+            btnFavStar.classList.remove("is-favorite");
         }
     }
 
