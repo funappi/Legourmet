@@ -243,6 +243,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     loadingDisplay.classList.add("hidden-mode");
                     loadingDisplay.style.display = "none"; 
                 }
+                
+                // 🚀 FERMETURE DU PANNEAU LORSQUE LA MODALE S'OUVRE
+                if (appContainer) {
+                    appContainer.classList.add("sidebar-collapsed");
+                }
+                
                 ideasModal?.classList.remove("hidden-mode");
             }
         } catch (err) {
@@ -291,7 +297,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const origTab = document.querySelector('[data-variant="original"]');
             if (origTab) origTab.click();
 
-            // CLAP DE FIN : Fermeture de la console de paramètres
+            // CLAP DE FIN : Fermeture de la console de paramètres (assurée également ici)
             if (appContainer) {
                 appContainer.classList.add("sidebar-collapsed");
             }
@@ -321,10 +327,18 @@ document.addEventListener("DOMContentLoaded", () => {
     
     document.getElementById("close-modal-btn")?.addEventListener("click", () => {
         ideasModal?.classList.add("hidden-mode");
+        // 🚀 SÉCURITÉ : Réouverture du panneau si l'utilisateur annule la sélection
+        if (appContainer) {
+            appContainer.classList.remove("sidebar-collapsed");
+        }
     });
     
     document.getElementById("retry-ideas-btn")?.addEventListener("click", () => {
         ideasModal?.classList.add("hidden-mode");
+        // 🚀 SÉCURITÉ : Réouverture du panneau si l'utilisateur annule la sélection
+        if (appContainer) {
+            appContainer.classList.remove("sidebar-collapsed");
+        }
         fetchIdeas();
     });
 
