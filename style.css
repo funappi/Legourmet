@@ -74,7 +74,7 @@ body {
     overflow-y: auto;
 }
 
-/* ðŸ†• MENU BURGER (N'apparaÃ®t que quand le menu latÃ©ral est fermÃ©) */
+/* 🆕 MENU BURGER (N'apparaît que quand le menu latéral est fermé) */
 .burger-btn {
     position: fixed;
     top: 20px;
@@ -90,7 +90,7 @@ body {
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     backdrop-filter: blur(10px);
     
-    /* Disparition magique par dÃ©faut */
+    /* Disparition magique par défaut */
     opacity: 0;
     pointer-events: none;
     transform: translateX(-20px);
@@ -98,14 +98,14 @@ body {
 }
 .burger-btn:hover { background: var(--accent); color: white; }
 
-/* Il devient visible UNIQUEMENT quand la sidebar est fermÃ©e */
+/* Il devient visible UNIQUEMENT quand la sidebar est fermée */
 .app-container.sidebar-collapsed .burger-btn {
     opacity: 1;
     pointer-events: auto;
     transform: translateX(0);
 }
 
-/* ðŸ†• BOUTON FERMER DANS LE MENU LATÃ‰RAL */
+/* 🆕 BOUTON FERMER DANS LE MENU LATÉRAL */
 .close-sidebar-btn {
     background: rgba(0,0,0,0.2);
     border: 1px solid var(--border-glass);
@@ -227,20 +227,20 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .ticks { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; padding: 0 2px; }
 
 /* ==========================================================================
-   6. VISUELS D'ASSIETTES ET EFFETS NÃ‰ONS ADOUCIS
+   6. VISUELS D'ASSIETTES ET EFFETS NÉONS ADOUCIS
    ========================================================================== */
 .plate-wrapper { 
     position: relative; 
-    width: min(100%, 330px);
+    width: min(100%, 300px);
     aspect-ratio: 1; 
     display: flex; align-items: center; justify-content: center; 
     margin-bottom: 20px; 
 }
 .plate { 
     width: 90%; height: 90%; 
-    border-radius: 10%; 
+    border-radius: 20%; 
     background: #1e2330; 
-    border: 4px solid #141720; 
+    border: 6px solid #141720; 
     box-shadow: 0 15px 40px rgba(0,0,0,0.5); 
     z-index: 2; overflow: hidden; transition: 0.4s;
 }
@@ -250,7 +250,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .plate-glow { 
     position: absolute; 
     width: 105%; height: 105%; 
-    border-radius:20%; 
+    border-radius: 20%; 
     z-index: 1; opacity: 0; 
     filter: blur(45px); 
     mix-blend-mode: screen; transition: opacity 0.5s ease, transform 0.5s ease; transform: scale(0.9); 
@@ -263,7 +263,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .glow-gourmand { background: radial-gradient(circle, rgba(245,158,11,0.4) 0%, rgba(0,0,0,0) 70%); }
 
 /* ==========================================================================
-   7. STRUCTURE DÃ‰TAILLÃ‰E DE LA FICHE RECETTE (MR. COOK LAYOUT)
+   7. STRUCTURE DÉTAILLÉE DE LA FICHE RECETTE (MR. COOK LAYOUT)
    ========================================================================== */
 .mrcook-layout { background: rgba(26, 29, 36, 0.4); border: 1px solid var(--border-glass); padding: 25px; border-radius: 14px; width: 100%; max-width: 850px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); opacity: 0; transform: translateY(15px); transition: all 0.4s ease; display: none; }
 .mrcook-layout.show { opacity: 1; transform: translateY(0); display: block; }
@@ -330,7 +330,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .ingredients-checklist li.checked-item { text-decoration: line-through; opacity: 0.4; color: var(--text-muted); }
 .custom-checkbox { width: 18px; height: 18px; border: 2px solid var(--text-muted); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; transition: 0.2s;}
 .checked-item .custom-checkbox { background: var(--accent); border-color: var(--accent); }
-.checked-item .custom-checkbox::after { content: "âœ“"; color: white; font-size: 11px; font-weight: bold; }
+.checked-item .custom-checkbox::after { content: "✓"; color: white; font-size: 11px; font-weight: bold; }
 
 .steps-ordered-list p { font-size: 0.95rem; line-height: 1.6; margin-bottom: 15px; color: var(--text-light); padding-left: 12px; border-left: 2px solid var(--border-glass); cursor: pointer; user-select: none; transition: opacity 0.2s; }
 .steps-ordered-list p.checked-step { text-decoration: line-through; opacity: 0.3; border-left-color: var(--accent); color: var(--text-muted); }
@@ -342,7 +342,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ==========================================================================
-   8. INTERFACES MODALES (IDÃ‰ES & FAVORIS)
+   8. INTERFACES MODALES (IDÉES & FAVORIS)
    ========================================================================== */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; transition: opacity 0.3s ease; }
 .modal-overlay.hidden-mode { opacity: 0; pointer-events: none; }
