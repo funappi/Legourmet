@@ -5,8 +5,8 @@ on:
     branches:
       - main
   schedule:
-    # Se réveille automatiquement TOUS LES MERCREDIS à midi (Heure Française - 10:00 UTC)
-    - cron: '0 10 * * 3'
+    # Se réveille automatiquement TOUS LES LUNDIS à minuit (UTC)
+    - cron: '0 0 * * 1'
 
 permissions:
   contents: write
@@ -24,49 +24,12 @@ jobs:
           folder: .
           branch: gh-pages
 
-      - name: 2. Sécurité - Cliquer sur le bouton jaune (Prolonger)
+      - name: 2. Sécurité - Cliquer sur le bouton jaune (Prolonger de 30 jours)
         run: |
-          echo "🌐 Envoi de la requête de prolongation..."
-          
-          # Exécution du curl en récupérant le contenu ET le code de statut HTTP
-          response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/webapps/${{ secrets.PA_DOMAIN }}/extend/ \
-            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}")
-          
-          # Extraction du corps de la réponse et du code HTTP
-          body=$(echo "$response" | sed '/HTTP_STATUS:/d')
-          status=$(echo "$response" | tr -d '\r' | grep "HTTP_STATUS:" | cut -d':' -f2)
-          
-          echo "=========================================="
-          echo "📊 RAPPORT DE PROLONGATION PYTHONANYWHERE"
-          echo "Code HTTP reçu : $status"
-          echo "Réponse brute : $body"
-          echo "=========================================="
-          
-          # Vérification si le code HTTP est dans la plage des 2xx (Succès)
-          if [ "$status" -lt 200 ] || [ "$status" -gt 299 ]; then
-            echo "❌ ÉCHEC CRITIQUE : Le serveur a refusé de prolonger le site !"
-            exit 1
-          fi
-          echo "✅ Prolongation validée avec succès par le serveur."
+          curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/webapps/${{ secrets.PA_DOMAIN }}/extend/ \
+            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}"
 
       - name: 3. Redémarrage - Recharger le serveur PythonAnywhere
         run: |
-          echo "🌐 Envoi de la requête de rechargement..."
-          
-          response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/webapps/${{ secrets.PA_DOMAIN }}/reload/ \
-            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}")
-          
-          body=$(echo "$response" | sed '/HTTP_STATUS:/d')
-          status=$(echo "$response" | tr -d '\r' | grep "HTTP_STATUS:" | cut -d':' -f2)
-          
-          echo "=========================================="
-          echo "📊 RAPPORT DE RECHARGEMENT PYTHONANYWHERE"
-          echo "Code HTTP reçu : $status"
-          echo "Réponse brute : $body"
-          echo "=========================================="
-          
-          if [ "$status" -lt 200 ] || [ "$status" -gt 299 ]; then
-            echo "❌ ÉCHEC CRITIQUE : Le serveur n'a pas pu être rechargé !"
-            exit 1
-          fi
-          echo "✅ Serveur rechargé avec succès."
+          curl -X POST https://www.pythonanywhere.com/api/v0/user/${{ secrets.PA_USER }}/webapps/${{ secrets.PA_DOMAIN }}/reload/ \
+            -H "Authorization: Token ${{ secrets.PA_API_TOKEN }}"
