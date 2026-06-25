@@ -1,3 +1,4 @@
+// main.js - Version Fusionnée (Fonctionnalités V2 + Architecture V1)
 window.activeRecipePack = null;
 window.currentSelectedVariant = "original";
 window.currentPortions = 1;
@@ -6,31 +7,28 @@ window.currentHardware = "Aucun";
 window.currentComplex = "Amateur";
 window.currentRisk = "Original";
 
-// 🆕 INITIALISATION DU TIROIR DE MÉMOIRE LOCAL COMPATIBLE
+// Mémoire locale
 let favorisRecettes = JSON.parse(localStorage.getItem("lg_favs") || "[]");
 
 document.addEventListener("DOMContentLoaded", () => {
     
-    // --- 0. INTERACTION FLUIDE DU MENU BURGER & CROIX INTÉGRÉE ---
+    // --- 1. UI & MENUS ---
     const appContainer = document.getElementById("mainAppContainer");
     const burgerToggle = document.getElementById("burger-toggle");
     const closeSidebarBtn = document.getElementById("close-sidebar-btn");
     
-    // Ouvrir le menu (Burger)
     if (burgerToggle && appContainer) {
         burgerToggle.addEventListener("click", () => {
             appContainer.classList.remove("sidebar-collapsed");
         });
     }
     
-    // Fermer le menu (Croix)
     if (closeSidebarBtn && appContainer) {
         closeSidebarBtn.addEventListener("click", () => {
             appContainer.classList.add("sidebar-collapsed");
         });
     }
 
-    // --- 1. ARCHITECTURE DES COULEURS & THÈMES ---
     const themeBtn = document.getElementById("theme-toggle");
     if (themeBtn) {
         themeBtn.addEventListener("click", () => {
@@ -39,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- 2. GESTION DES INTERRUPTEURS (LINKAGES ON/OFF) ---
+    // --- 2. TOGGLES & CATÉGORIES ---
     const linkages = [
         { t: 't-ing', c: 'c-ing' },
         { t: 't-fusion', c: 'c-fusion' },
@@ -58,7 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // --- 3. SÉLECTION DES CARDS ÉQUIPEMENT (MULTIPLE) ---
+    // --- 3. SÉLECTIONS DES CARDS ---
     document.querySelectorAll('.equip-card').forEach(card => {
         card.addEventListener('click', () => {
             const equipContainer = document.getElementById('c-equip');
@@ -68,7 +66,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 4. SÉLECTION DES CARDS RÉGIME ALIMENTAIRE (UNIQUE / TOGGLE) ---
     document.querySelectorAll('.diet-card').forEach(card => {
         card.addEventListener('click', () => {
             const dietContainer = document.getElementById('c-diet');
@@ -83,7 +80,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 5. SÉLECTION DES CARDS MODE DE CUISSON (UNIQUE / TOGGLE) ---
     document.querySelectorAll('.style-card').forEach(card => {
         card.addEventListener('click', () => {
             const dietContainer = document.getElementById('c-diet');
@@ -98,18 +94,19 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 6. VALEURS TEXTUELLES DES SLIDERS ---
+    // --- 4. SLIDERS ---
     const riskLevels = { "1": "Classique", "2": "Original", "3": "Aventure" };
     const timeLevels = { "1": "Fast Food", "2": "Amateur", "3": "Guide Michelin" };
-
+    
     document.getElementById('slider-risk')?.addEventListener('input', (e) => {
         document.getElementById('risk-val').innerText = riskLevels[e.target.value];
     });
+    
     document.getElementById('slider-time')?.addEventListener('input', (e) => {
         document.getElementById('time-val').innerText = timeLevels[e.target.value];
     });
 
-    // --- 7. ÉCOUTEURS D'ONGLETS VARIATIONS ---
+    // --- 5. ONGLETS DE VARIATIONS & PORTIONS ---
     document.querySelectorAll(".var-tab").forEach(tab => {
         tab.addEventListener("click", () => {
             if (!window.activeRecipePack) return;
@@ -120,12 +117,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- 8. WIDGET MULTIPLICATEUR DE PORTIONS (MR. COOK) ---
     document.getElementById("btn-plus")?.addEventListener("click", () => {
         window.currentPortions++;
         document.getElementById("portion-display").innerText = window.currentPortions;
         if(window.activeRecipePack) window.renderSelectedVariant(window.currentSelectedVariant);
     });
+    
     document.getElementById("btn-minus")?.addEventListener("click", () => {
         if (window.currentPortions > 1) {
             window.currentPortions--;
@@ -134,7 +131,31 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // --- 9. CONFIGURATION ET AGGRÉGATION DU PAYLOAD ---
+    // --- 6. GESTION DU MENU MULTI-FUSION (Issue de la V2) ---
+    document.getElementById("add-fusion-btn")?.addEventListener("click", () => {
+        const fusionList = document.getElementById("fusion-list");
+        if (fusionList && fusionList.children.length < 4) { // Bride de sécurité à 4
+            const newRow = document.createElement("div");
+            newRow.className = "fusion-row";
+            newRow.style.cssText = "display: flex; gap: 10px; align-items: center; margin-top: 10px;";
+            
+            const originalSelect = fusionList.querySelector('.fusion-select');
+            const selectClone = originalSelect.cloneNode(true);
+            selectClone.value = ""; 
+            
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "remove-fusion-btn";
+            deleteBtn.innerHTML = "✕";
+            deleteBtn.title = "Supprimer";
+            deleteBtn.onclick = () => newRow.remove();
+
+            newRow.appendChild(selectClone);
+            newRow.appendChild(deleteBtn);
+            fusionList.appendChild(newRow);
+        }
+    });
+
+    // --- 7. MOTEUR DE GÉNÉRATION & PAYLOAD ---
     const btnGenerate = document.getElementById("btn-generate");
     const loadingDisplay = document.getElementById("loading-display");
     const loadingText = loadingDisplay?.querySelector("h2");
@@ -145,22 +166,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const hardware = [];
         document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
 
-        // Vérification stricte et robuste de la présence d'ingrédients personnalisés
-        const hasIngredients = document.getElementById('t-ing')?.checked && window.selectedIngredients && 
-                               (window.selectedIngredients.base?.size > 0 || 
-                                window.selectedIngredients.protein?.size > 0 || 
-                                window.selectedIngredients.vegetable?.size > 0 || 
-                                window.selectedIngredients["anti-gaspi"]?.size > 0);
+        const hasIngredients = document.getElementById('t-ing')?.checked && window.selectedIngredients && window.selectedIngredients.base?.size > 0;
+        let ingredientsPack = hasIngredients ? Array.from(window.selectedIngredients.base) : ["Auto_FoodPairing"];
 
-        let ingredientsPack = [];
-        if (hasIngredients) {
-            if (window.selectedIngredients["anti-gaspi"]) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
-            if (window.selectedIngredients.base) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.base));
-            if (window.selectedIngredients.protein) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.protein));
-            if (window.selectedIngredients.vegetable) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.vegetable));
-        } else {
-            ingredientsPack = ["Auto_FoodPairing"];
-        }
+        const fusionSelects = document.querySelectorAll('.fusion-select');
+        const fusionValues = [];
+        fusionSelects.forEach(select => {
+            if(select.value && select.value !== "") fusionValues.push(select.value);
+        });
+        const fusionString = fusionValues.length > 0 ? fusionValues.join(" + ") : "Auto_FoodPairing";
 
         const riskVal = document.getElementById('risk-val');
         const timeVal = document.getElementById('time-val');
@@ -169,18 +183,27 @@ document.addEventListener("DOMContentLoaded", () => {
         window.currentComplex = document.getElementById('t-sliders')?.checked && timeVal ? timeVal.innerText : "Amateur";
         window.currentRisk = document.getElementById('t-sliders')?.checked && riskVal ? riskVal.innerText : "Original";
 
-        // Définition de la directive selon la présence d'ingrédients (Logique issue du Bloc 1)
-        let levelPromptSystem = hasIngredients 
-            ? "INSTRUCTION STRICTE : Crée une recette en utilisant UNIQUEMENT les ingrédients fournis. N'ajoute AUCUN autre aliment majeur non listé (sauf sel, poivre, huile)."
-            : "INSTRUCTION CRÉATIVE : Crée une recette inspirée par la demande de l'utilisateur. Tu es libre d'ajouter les ingrédients nécessaires pour sublimer le plat.";
+        const inspiration = document.getElementById("simple-prompt-input")?.value.trim();
 
-        // Raffinement de l'instruction par niveau de complexité de façon immersive
+        // Directive avancée (V2)
+        let levelPromptSystem = hasIngredients 
+            ? "INSTRUCTION STRICTE : Tu DOIS construire une recette réaliste centrée sur les ingrédients fournis par l'utilisateur. Ne rajoute aucun ingrédient central majeur non listé."
+            : "INSTRUCTION CRÉATIVE : Tu es un chef créatif libre d'imaginer le meilleur plat possible.";
+
+        if (inspiration && inspiration.length > 0) {
+            levelPromptSystem += `\n🚨 PRIORITÉ ABSOLUE (INSPIRATION) : L'utilisateur a demandé : "${inspiration}". La recette DOIT obligatoirement répondre à ce besoin précis.`;
+        }
+
+        if (fusionString !== "Auto_FoodPairing") {
+            levelPromptSystem += `\n🌍 FUSION GÉOGRAPHIQUE : La recette s'inspire de ces régions : ${fusionString}. INSTRUCTION CRUCIALE : Tu DOIS obligatoirement intégrer 2 à 3 ingrédients phares emblématiques de ces zones.`;
+        }
+
         if (window.currentComplex === "Fast Food") {
-            levelPromptSystem += " Agis en chef street-food : recette extrêmement rapide (moins de 20 min), gourmande, utilisant un minimum de vaisselle (One-Pot).";
+            levelPromptSystem += " Agis en chef street-food (rapide, moins de 20 min).";
         } else if (window.currentComplex === "Guide Michelin") {
-            levelPromptSystem += " Agis en chef triplement étoilé : recette technique, sophistiquée, avec des textures contrastées, réduction de sauce, dressage artistique minutieux.";
+            levelPromptSystem += " Agis en chef étoilé (techniques complexes, dressage pro).";
         } else {
-            levelPromptSystem += " Agis en chef amateur passionné : propose une recette conviviale, équilibrée, avec des étapes claires et accessibles, parfaite pour un repas du quotidien.";
+            levelPromptSystem += " Agis en chef passionné (convivial, clair).";
         }
 
         const activeDietCard = document.querySelector('.diet-card.active');
@@ -188,9 +211,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return {
             mode: "Avancé",
-            simple_prompt: document.getElementById("simple-prompt-input")?.value || "Repas surprise du chef",
+            simple_prompt: inspiration || "Repas surprise",
             ingredients: ingredientsPack,
-            fusion: document.getElementById("t-fusion")?.checked ? (document.getElementById("fusion-input")?.value || "Auto_FoodPairing") : "Auto_FoodPairing",
+            fusion: fusionString,
             equipment: document.getElementById("t-equip")?.checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"],
             risk: window.currentRisk,
             time: window.currentComplex,
@@ -200,11 +223,11 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     }
 
-    // ÉTAPE 1 : Demande des 3 Inspirations (generate-ideas)
     async function fetchIdeas() {
         if (!btnGenerate) return;
         btnGenerate.disabled = true;
         btnGenerate.innerText = "Recherche d'inspirations...";
+        
         document.getElementById("recipeCard").classList.remove("show");
         document.getElementById("variationTabsZone").style.display = "none";
         
@@ -212,17 +235,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (btnFavStar) btnFavStar.style.display = "none";
         
         if (loadingText) loadingText.innerText = "Recherche de 3 idées de plats...";
-        if (loadingDisplay) {
-            loadingDisplay.classList.remove("hidden-mode");
-            loadingDisplay.style.display = "block";
+        if (loadingDisplay) { 
+            loadingDisplay.classList.remove("hidden-mode"); 
+            loadingDisplay.style.display = "block"; 
         }
 
         const payload = getFormPayload();
 
         try {
             const response = await fetch(`${BACKEND_URL}/generate-ideas`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify(payload)
             });
 
@@ -239,23 +262,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     ideasContainer.appendChild(card);
                 });
                 
-                if (loadingDisplay) {
-                    loadingDisplay.classList.add("hidden-mode");
+                if (loadingDisplay) { 
+                    loadingDisplay.classList.add("hidden-mode"); 
                     loadingDisplay.style.display = "none"; 
                 }
                 
-                // 🚀 FERMETURE DU PANNEAU LORSQUE LA MODALE S'OUVRE
-                if (appContainer) {
-                    appContainer.classList.add("sidebar-collapsed");
-                }
-                
+                if (appContainer) appContainer.classList.add("sidebar-collapsed");
                 ideasModal?.classList.remove("hidden-mode");
             }
         } catch (err) {
             console.error(err);
-            if (loadingDisplay) {
-                loadingDisplay.classList.add("hidden-mode");
-                loadingDisplay.style.display = "none";
+            if (loadingDisplay) { 
+                loadingDisplay.classList.add("hidden-mode"); 
+                loadingDisplay.style.display = "none"; 
             }
             alert("⚠️ Le Chef a confondu le câble réseau avec un spaghetti ! Veuillez réessayer.");
         } finally {
@@ -264,13 +283,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // ÉTAPE 2 : Concoction finale de la recette complète basée sur le choix
     async function fetchFullRecipe(selectedTitle) {
         if (ideasModal) ideasModal.classList.add("hidden-mode");
         if (loadingText) loadingText.innerText = "Le Chef élabore vos sauces et techniques...";
-        if (loadingDisplay) {
-            loadingDisplay.classList.remove("hidden-mode");
-            loadingDisplay.style.display = "block";
+        
+        if (loadingDisplay) { 
+            loadingDisplay.classList.remove("hidden-mode"); 
+            loadingDisplay.style.display = "block"; 
         }
 
         const payload = getFormPayload();
@@ -278,8 +297,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             const response = await fetch(`${BACKEND_URL}/generate-recipe`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify(payload)
             });
 
@@ -297,286 +316,252 @@ document.addEventListener("DOMContentLoaded", () => {
             const origTab = document.querySelector('[data-variant="original"]');
             if (origTab) origTab.click();
 
-            // CLAP DE FIN : Fermeture de la console de paramètres (assurée également ici)
-            if (appContainer) {
-                appContainer.classList.add("sidebar-collapsed");
-            }
+            if (appContainer) appContainer.classList.add("sidebar-collapsed");
 
         } catch (err) {
             console.error(err);
             document.getElementById("recipeTitle").innerText = "🔥 En chasse après les ingrédients";
             const stepsList = document.getElementById("stepsList");
             if (stepsList) {
-                stepsList.innerHTML = `
-                    <p><strong>🚨 Alerte en cuisine :</strong> L'IA vient de renverser sa sauce magique directement sur la carte mère...</p>
-                    <p>Le Chef est actuellement en train de courir après un poulet virtuel dans l'arrière-boutique pour essayer de sauver ton assiette.</p>
-                    <p>Ne panique pas, essuie la table de cuisson et reclique sur le bouton <strong>Cuisiner 🚀</strong> !</p>
-                `;
+                stepsList.innerHTML = `<p><strong>🚨 Alerte en cuisine :</strong> Le Chef court après un poulet. Reclique sur Cuisiner !</p>`;
             }
             document.getElementById("recipeCard").classList.add("show");
         } finally {
-            if (loadingDisplay) {
-                loadingDisplay.classList.add("hidden-mode");
+            if (loadingDisplay) { 
+                loadingDisplay.classList.add("hidden-mode"); 
                 loadingDisplay.style.display = "none"; 
             }
         }
     }
 
-    // Assignation des déclencheurs de base
     if (btnGenerate) btnGenerate.addEventListener("click", fetchIdeas);
     
-    document.getElementById("close-modal-btn")?.addEventListener("click", () => {
-        ideasModal?.classList.add("hidden-mode");
-        // 🚀 SÉCURITÉ : Réouverture du panneau si l'utilisateur annule la sélection
-        if (appContainer) {
-            appContainer.classList.remove("sidebar-collapsed");
-        }
+    document.getElementById("close-modal-btn")?.addEventListener("click", () => { 
+        ideasModal?.classList.add("hidden-mode"); 
+        if (appContainer) appContainer.classList.remove("sidebar-collapsed"); 
     });
     
-    document.getElementById("retry-ideas-btn")?.addEventListener("click", () => {
-        ideasModal?.classList.add("hidden-mode");
-        // 🚀 SÉCURITÉ : Réouverture du panneau si l'utilisateur annule la sélection
-        if (appContainer) {
-            appContainer.classList.remove("sidebar-collapsed");
-        }
-        fetchIdeas();
+    document.getElementById("retry-ideas-btn")?.addEventListener("click", () => { 
+        ideasModal?.classList.add("hidden-mode"); 
+        if (appContainer) appContainer.classList.remove("sidebar-collapsed"); 
+        fetchIdeas(); 
     });
 
-    // ==========================================================================
-    // 🆕 GESTION DU BOOKMARK & MODALE DES FAVORIS SAUVEGARDÉS
-    // ==========================================================================
+    // --- 8. FAVORIS ---
     const favModal = document.getElementById("favorites-modal-overlay");
     const btnOpenFavs = document.getElementById("btn-open-favorites");
     const closeFavModalBtn = document.getElementById("close-fav-modal-btn");
     const favsContainer = document.getElementById("favorites-container");
 
-    // Fonction pour afficher la liste des recettes favorites
     function renderFavoritesModal() {
         if (!favsContainer) return;
         favsContainer.innerHTML = "";
         
-        if (favorisRecettes.length === 0) {
-            favsContainer.innerHTML = "<p style='color: var(--text-muted); text-align: center; padding: 20px;'>Tu n'as aucune recette en favori pour le moment. Cuisines-en une et clique sur l'étoile !</p>";
-            return;
+        if (favorisRecettes.length === 0) { 
+            favsContainer.innerHTML = "<p style='color: var(--text-muted); text-align: center; padding: 20px;'>Aucune recette en favori.</p>"; 
+            return; 
         }
 
-        // On boucle sur la liste locale
         favorisRecettes.forEach((fav, index) => {
-            const card = document.createElement("div");
+            const card = document.createElement("div"); 
             card.className = "idea-card"; 
-            card.style.flexDirection = "row";
-            card.style.justifyContent = "space-between";
+            card.style.flexDirection = "row"; 
+            card.style.justifyContent = "space-between"; 
             card.style.alignItems = "center";
             
-            const titleSpan = document.createElement("h4");
-            titleSpan.innerText = fav.title;
-            titleSpan.style.margin = "0";
+            const titleSpan = document.createElement("h4"); 
+            titleSpan.innerText = fav.title; 
+            titleSpan.style.margin = "0"; 
             titleSpan.style.flex = "1";
             
-            const actionDiv = document.createElement("div");
-            actionDiv.style.display = "flex";
+            const actionDiv = document.createElement("div"); 
+            actionDiv.style.display = "flex"; 
             actionDiv.style.gap = "10px";
 
-            // Bouton "Cuisiner" le favori
-            const btnLoad = document.createElement("button");
-            btnLoad.innerText = "Cuisiner";
-            btnLoad.className = "control-btn";
-            btnLoad.style.borderColor = "var(--healthy-color)";
+            const btnLoad = document.createElement("button"); 
+            btnLoad.innerText = "Cuisiner"; 
+            btnLoad.className = "control-btn"; 
+            btnLoad.style.borderColor = "var(--healthy-color)"; 
             btnLoad.style.color = "var(--healthy-color)";
-            btnLoad.onclick = (e) => {
-                e.stopPropagation();
-                loadFavoriteRecipe(fav);
+            btnLoad.onclick = (e) => { 
+                e.stopPropagation(); 
+                loadFavoriteRecipe(fav); 
             };
 
-            // Bouton pour supprimer le favori
-            const btnDelete = document.createElement("button");
-            btnDelete.innerText = "✖";
-            btnDelete.className = "control-btn";
-            btnDelete.style.borderColor = "var(--accent)";
+            const btnDelete = document.createElement("button"); 
+            btnDelete.innerText = "✖"; 
+            btnDelete.className = "control-btn"; 
+            btnDelete.style.borderColor = "var(--accent)"; 
             btnDelete.style.color = "var(--accent)";
             btnDelete.onclick = (e) => {
-                e.stopPropagation();
-                favorisRecettes.splice(index, 1);
-                localStorage.setItem("lg_favs", JSON.stringify(favorisRecettes));
+                e.stopPropagation(); 
+                favorisRecettes.splice(index, 1); 
+                localStorage.setItem("lg_favs", JSON.stringify(favorisRecettes)); 
                 renderFavoritesModal(); 
                 
-                // Si la recette effacée était celle affichée à l'écran, on vide l'étoile
                 if (window.activeRecipePack && window.activeRecipePack.original.title === fav.title) {
                     const btnFavStar = document.getElementById("btn-favorite-recipe");
-                    if (btnFavStar) {
-                        btnFavStar.innerHTML = "☆";
-                        btnFavStar.classList.remove("is-favorite");
+                    if (btnFavStar) { 
+                        btnFavStar.innerHTML = "☆"; 
+                        btnFavStar.classList.remove("is-favorite"); 
                     }
                 }
             };
-
-            actionDiv.appendChild(btnLoad);
-            actionDiv.appendChild(btnDelete);
-            card.appendChild(titleSpan);
-            card.appendChild(actionDiv);
+            
+            actionDiv.appendChild(btnLoad); 
+            actionDiv.appendChild(btnDelete); 
+            card.appendChild(titleSpan); 
+            card.appendChild(actionDiv); 
             favsContainer.appendChild(card);
         });
     }
 
     if (btnOpenFavs) {
-        btnOpenFavs.addEventListener("click", () => {
-            renderFavoritesModal();
-            if(favModal) favModal.classList.remove("hidden-mode");
+        btnOpenFavs.addEventListener("click", () => { 
+            renderFavoritesModal(); 
+            if(favModal) favModal.classList.remove("hidden-mode"); 
         });
     }
     
     if (closeFavModalBtn) {
-        closeFavModalBtn.addEventListener("click", () => {
-            if(favModal) favModal.classList.add("hidden-mode");
+        closeFavModalBtn.addEventListener("click", () => { 
+            if(favModal) favModal.classList.add("hidden-mode"); 
         });
     }
 
-    // Chargement instantané d'une recette depuis la liste
     function loadFavoriteRecipe(favObj) {
-        window.activeRecipePack = favObj.pack;
+        window.activeRecipePack = favObj.pack; 
         window.currentPortions = 1;
-        const portionDisplay = document.getElementById("portion-display");
+        
+        const portionDisplay = document.getElementById("portion-display"); 
         if (portionDisplay) portionDisplay.innerText = "1";
         
         document.getElementById("variationTabsZone").style.display = "flex";
         
         if (favModal) favModal.classList.add("hidden-mode");
         
-        // On clique artificiellement sur l'onglet original pour tout relancer
-        const origTab = document.querySelector('[data-variant="original"]');
+        const origTab = document.querySelector('[data-variant="original"]'); 
         if (origTab) origTab.click();
         
-        // Rétracter le menu burger
         if (appContainer) appContainer.classList.add("sidebar-collapsed");
     }
 
-    // GESTION DE L'ÉTOILE FAVORIS
     const btnFavStar = document.getElementById("btn-favorite-recipe");
     if (btnFavStar) {
         btnFavStar.addEventListener("click", () => {
             if (!window.activeRecipePack) return;
             const currentTitle = document.getElementById("recipeTitle").innerText;
-            
             const index = favorisRecettes.findIndex(fav => fav.title === currentTitle);
             
-            if (index > -1) {
-                favorisRecettes.splice(index, 1); // Suppression
-                btnFavStar.innerHTML = "☆";
-                btnFavStar.classList.remove("is-favorite");
-            } else {
-                favorisRecettes.push({ title: currentTitle, pack: window.activeRecipePack }); // Ajout
-                btnFavStar.innerHTML = "★";
-                btnFavStar.classList.add("is-favorite");
+            if (index > -1) { 
+                favorisRecettes.splice(index, 1); 
+                btnFavStar.innerHTML = "☆"; 
+                btnFavStar.classList.remove("is-favorite"); 
+            } else { 
+                favorisRecettes.push({ title: currentTitle, pack: window.activeRecipePack }); 
+                btnFavStar.innerHTML = "★"; 
+                btnFavStar.classList.add("is-favorite"); 
             }
+            
             localStorage.setItem("lg_favs", JSON.stringify(favorisRecettes));
         });
     }
 
-    // ==========================================================================
-    // ACTION 1 : SCREENSHOT NATIF ET SANS COUPURE
-    // ==========================================================================
+    // --- 9. EXPORTS ET SCREENSHOT ---
     const btnShareScreenshot = document.getElementById("btn-share-screenshot");
     if (btnShareScreenshot) {
         btnShareScreenshot.addEventListener("click", async () => {
-            const recipeCard = document.getElementById("recipeCard");
+            const recipeCard = document.getElementById("recipeCard"); 
             if (!recipeCard || !window.activeRecipePack) return;
-
-            const oldText = btnShareScreenshot.innerText;
-            btnShareScreenshot.innerText = "⚡ Immortalisation du moment...";
-
-            const actionsContainer = recipeCard.querySelector(".recipe-actions-container");
+            
+            const oldText = btnShareScreenshot.innerText; 
+            btnShareScreenshot.innerText = "⚡ Immortalisation...";
+            
+            const actionsContainer = recipeCard.querySelector(".recipe-actions-container"); 
             if (actionsContainer) actionsContainer.style.display = "none";
-
+            
             try {
-                const canvas = await html2canvas(recipeCard, {
-                    useCORS: true,          
-                    allowTaint: false,
+                const canvas = await html2canvas(recipeCard, { 
+                    useCORS: true, 
+                    allowTaint: false, 
                     backgroundColor: "#11141a", 
-                    scale: 2,               
-                    logging: false
+                    scale: 2, 
+                    logging: false 
                 });
-
+                
                 if (actionsContainer) actionsContainer.style.display = "flex";
-
+                
                 canvas.toBlob(async (blob) => {
-                    if (!blob) return;
+                    if (!blob) return; 
                     const file = new File([blob], "ma-recette-le-gourmet.png", { type: "image/png" });
-
+                    
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                            files: [file],
-                            title: "Ma recette Le Gourmet 🍳",
-                            text: "Je partage ma recette elle est pas secrète !"
+                        await navigator.share({ 
+                            files: [file], 
+                            title: "Ma recette Le Gourmet 🍳", 
+                            text: "Je partage ma recette!" 
                         });
-                    } else {
-                        const link = document.createElement("a");
-                        link.download = "ma-recette-le-gourmet.png";
-                        link.href = canvas.toDataURL();
-                        link.click();
+                    } else { 
+                        const link = document.createElement("a"); 
+                        link.download = "ma-recette-le-gourmet.png"; 
+                        link.href = canvas.toDataURL(); 
+                        link.click(); 
                     }
                 }, "image/png");
-
-            } catch (err) {
-                console.error("Erreur capture :", err);
+                
+            } catch (err) { 
+                console.error(err); 
                 if (actionsContainer) actionsContainer.style.display = "flex"; 
-            } finally {
-                btnShareScreenshot.innerText = oldText;
+            } finally { 
+                btnShareScreenshot.innerText = oldText; 
             }
         });
     }
 
-    // ==========================================================================
-    // ACTION 2 : COPIE DE LA LISTE DE COURSES + REDIRECTION VERS LES NOTES
-    // ==========================================================================
     const btnExportNotes = document.getElementById("btn-export-notes");
     if (btnExportNotes) {
         btnExportNotes.addEventListener("click", async () => {
             if (!window.activeRecipePack) return;
-            const data = window.activeRecipePack[window.currentSelectedVariant];
-            if (!data) return;
-
-            let textOutput = `🛒 LISTE DE COURSES : ${data.title.toUpperCase()}\n`;
-            textOutput += `Pour ${window.currentPortions} personne(s)\n\n`;
             
-            data.ingredients.forEach(ing => {
-                const qty = (parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '');
-                textOutput += `- [ ] ${qty} ${ing.unit} ${ing.name}\n`;
+            const data = window.activeRecipePack[window.currentSelectedVariant]; 
+            if (!data) return;
+            
+            let textOutput = `🛒 LISTE DE COURSES : ${data.title.toUpperCase()}\nPour ${window.currentPortions} personne(s)\n\n`;
+            
+            data.ingredients.forEach(ing => { 
+                textOutput += `- [ ] ${(parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '')} ${ing.unit} ${ing.name}\n`; 
             });
-
+            
             try {
                 await navigator.clipboard.writeText(textOutput);
-
                 if (navigator.share) {
-                    await navigator.share({
-                        text: textOutput
-                    });
-                } else {
-                    const oldText = btnExportNotes.innerText;
-                    btnExportNotes.innerText = "Copié ! Va faire les courses on a faim";
-                    setTimeout(() => { btnExportNotes.innerText = oldText; }, 2500);
+                    await navigator.share({ text: textOutput });
+                } else { 
+                    const oldText = btnExportNotes.innerText; 
+                    btnExportNotes.innerText = "Copié !"; 
+                    setTimeout(() => { btnExportNotes.innerText = oldText; }, 2500); 
                 }
-            } catch (err) {
-                console.error("Tu sais même pas recopier (réessaye) :", err);
-            }
+            } catch (err) {}
         });
     }
 });
 
-// --- 11. LE MOTEUR DE RENDU INTERACTIF DOUBLE COLONNE MR. COOK ---
+// --- 10. MOTEUR DE RENDU INTERACTIF ---
 window.renderSelectedVariant = function(variantKey) {
-    const data = window.activeRecipePack[variantKey];
+    const data = window.activeRecipePack[variantKey]; 
     if (!data) return;
-
+    
     document.querySelectorAll('.plate-glow').forEach(g => g.classList.remove('active'));
-    const glowTarget = document.getElementById(`glow-${variantKey}`);
+    const glowTarget = document.getElementById(`glow-${variantKey}`); 
     if (glowTarget) glowTarget.classList.add('active');
 
     const keywords = data.title.split(' ').slice(0, 4).join('%20');
     const plateImg = document.getElementById("plateImage");
-    if(plateImg) {
-        plateImg.style.backgroundImage = `url('https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${keywords}?width=400&height=400&nologo=true')`;
-        const placeholder = document.getElementById("plate-placeholder");
-        if(placeholder) placeholder.style.display = "none";
+    
+    if(plateImg) { 
+        plateImg.style.backgroundImage = `url('https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${keywords}?width=400&height=400&nologo=true')`; 
+        const placeholder = document.getElementById("plate-placeholder"); 
+        if(placeholder) placeholder.style.display = "none"; 
     }
 
     document.getElementById("recipeTitle").innerText = data.title || "Titre inconnu";
@@ -584,56 +569,49 @@ window.renderSelectedVariant = function(variantKey) {
     document.getElementById("c-time").innerText = data.cook_time ? `${data.cook_time} min` : "--";
     document.getElementById("t-time").innerText = data.total_time ? `${data.total_time} min` : "--";
     
-    const rEquip = document.getElementById("r-equip");
+    const rEquip = document.getElementById("r-equip"); 
     if(rEquip) rEquip.innerText = window.currentHardware;
-    const rComplex = document.getElementById("r-complex");
+    
+    const rComplex = document.getElementById("r-complex"); 
     if(rComplex) rComplex.innerText = window.currentComplex;
-    const rRisk = document.getElementById("r-risk");
+    
+    const rRisk = document.getElementById("r-risk"); 
     if(rRisk) rRisk.innerText = window.currentRisk;
-
+    
     document.getElementById("r-nova").innerText = `NOVA ${data.nova_score || '?'}`;
     
-    if (data.macros) {
-        document.getElementById("r-pro").innerText = data.macros.proteines || "--";
-        document.getElementById("r-lip").innerText = data.macros.lipides || "--";
-        document.getElementById("r-glu").innerText = data.macros.glucides || "--";
+    if (data.macros) { 
+        document.getElementById("r-pro").innerText = data.macros.proteines || "--"; 
+        document.getElementById("r-lip").innerText = data.macros.lipides || "--"; 
+        document.getElementById("r-glu").innerText = data.macros.glucides || "--"; 
     }
 
     const ingList = document.getElementById("ingredientsList");
     if (ingList && data.ingredients && Array.isArray(data.ingredients)) {
-        ingList.innerHTML = data.ingredients.map(ing => {
-            const calculatedQty = (parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '');
-            return `<li><div class="custom-checkbox"></div> <label><strong>${calculatedQty} ${ing.unit}</strong> ${ing.name}</label></li>`;
-        }).join('');
-
-        ingList.querySelectorAll('li').forEach(li => {
-            li.addEventListener('click', () => li.classList.toggle('checked-item'));
-        });
+        ingList.innerHTML = data.ingredients.map(ing => `<li><div class="custom-checkbox"></div> <label><strong>${(parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '')} ${ing.unit}</strong> ${ing.name}</label></li>`).join('');
+        ingList.querySelectorAll('li').forEach(li => li.addEventListener('click', () => li.classList.toggle('checked-item')));
     }
 
     const stepsList = document.getElementById("stepsList");
     if (stepsList && data.steps) {
-        if (Array.isArray(data.steps)) {
-            stepsList.innerHTML = data.steps.map((step, idx) => `<p><strong>Étape ${idx + 1} :</strong> ${step}</p>`).join('');
-            stepsList.querySelectorAll('p').forEach(p => p.addEventListener('click', () => p.classList.toggle('checked-step')));
+        if (Array.isArray(data.steps)) { 
+            stepsList.innerHTML = data.steps.map((step, idx) => `<p><strong>Étape ${idx + 1} :</strong> ${step}</p>`).join(''); 
+            stepsList.querySelectorAll('p').forEach(p => p.addEventListener('click', () => p.classList.toggle('checked-step'))); 
         } else {
             stepsList.innerHTML = `<p>${data.steps}</p>`;
         }
     }
 
-    // MISE À JOUR VISUELLE DE L'ÉTOILE APRÈS GÉNÉRATION OU CHANGEMENT D'ONGLET
     const btnFavStar = document.getElementById("btn-favorite-recipe");
     if (btnFavStar) {
         btnFavStar.style.display = "inline-block";
-        const isFav = favorisRecettes.some(fav => fav.title === data.title);
-        if (isFav) {
-            btnFavStar.innerHTML = "★";
-            btnFavStar.classList.add("is-favorite");
-        } else {
-            btnFavStar.innerHTML = "☆";
-            btnFavStar.classList.remove("is-favorite");
+        if (favorisRecettes.some(fav => fav.title === data.title)) { 
+            btnFavStar.innerHTML = "★"; 
+            btnFavStar.classList.add("is-favorite"); 
+        } else { 
+            btnFavStar.innerHTML = "☆"; 
+            btnFavStar.classList.remove("is-favorite"); 
         }
     }
-
     document.getElementById("recipeCard").classList.add("show");
 };

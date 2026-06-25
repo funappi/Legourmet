@@ -24,7 +24,7 @@
             </div>
 
             <div id="simple-mode" class="active-mode section">
-                <h2>Inspiration du moment</h2>
+                <h2>💡 Inspiration du moment</h2>
                 <textarea id="simple-prompt-input" name="simple_prompt" aria-label="Description de votre envie" placeholder="Décrivez votre plat de rêve (ex: un bowl chaud d'inspiration asiatique et épicée)..."></textarea>
             </div>
 
@@ -32,42 +32,59 @@
                 
                 <div class="control-group section">
                     <div class="group-header">
-                        <h2>Vos Ingrédients</h2>
+                        <h2>🔍 Vos Ingrédients</h2>
                         <label class="switch"><input type="checkbox" id="t-ing" name="toggle_ing" aria-label="Activer les ingrédients" checked><span class="slider"></span></label>
                     </div>
                     <div class="group-content" id="c-ing">
-                        <input type="text" id="ingredient-input" name="ingredient_input" class="ingredient-autocomplete-input" aria-label="Recherche d'ingrédient" placeholder="Tapez vos ingrédients (ex: pates, oeuf, creme, poulet)...">
-                        <div class="tags-output-zone" id="tags-ingredients-container"></div>
+                        <div class="input-tags-wrapper" id="ingredient-wrapper">
+                            <div class="tags-inline-zone" id="tags-ingredients-container"></div>
+                            <input type="text" id="ingredient-input" data-category="base" class="ingredient-autocomplete-input inner-input" aria-label="Recherche d'ingrédient" placeholder="Ajouter un ingrédient...">
+                        </div>
                         <ul id="autocomplete-list" class="hidden-mode"></ul>
                     </div>
                 </div>
 
                 <div class="control-group section">
                     <div class="group-header">
-                        <h2>Cuisine Fusion</h2>
+                        <h2>🌍 Cuisine Fusion</h2>
                         <label class="switch"><input type="checkbox" id="t-fusion" name="toggle_fusion" aria-label="Activer cuisine fusion" checked><span class="slider"></span></label>
                     </div>
                     <div class="group-content" id="c-fusion">
-                        <input type="text" id="fusion-input" name="fusion_input" aria-label="Origine de la cuisine" placeholder="Ex: Japon, Mexique, Italie">
+                        <div id="fusion-list" style="display: flex; flex-direction: column;">
+                            <div class="fusion-row" style="display: flex; gap: 10px; align-items: center;">
+                                <select class="fusion-select" name="fusion_input" style="flex: 1;">
+                                    <option value="">Sélectionnez une inspiration...</option>
+                                    <option value="Europe & Pays de l'Est (Laitage, Blé, Fermentation)">🇪🇺 Europe & Pays de l'Est</option>
+                                    <option value="Asie (Riz, Soja, Umami)">🌏 Asie</option>
+                                    <option value="Afrique (Tubercules, Épices sèches)">🌍 Afrique</option>
+                                    <option value="Amériques N/S (Maïs, Piment, Grillade)">🌎 Amériques (N/S)</option>
+                                    <option value="Moyen-Orient & Levant (Épices douces, Pain plat)">🐪 Moyen-Orient & Levant</option>
+                                    <option value="Sous-Continent Indien (Currys, Lentilles)">🇮🇳 Sous-Continent Indien</option>
+                                    <option value="Caraïbes & Créole (Fusion Afrique-Europe-Amérindien, Chaleur)">🏝️ Caraïbes & Créole</option>
+                                    <option value="Océanie & Pacifique (Feu de terre, Coco)">🌊 Océanie & Pacifique</option>
+                                </select>
+                                <div style="width: 30px;"></div> </div>
+                        </div>
+                        <button id="add-fusion-btn" class="add-circular-btn" aria-label="Ajouter une cuisine fusion" title="Croiser avec une autre origine">+</button>
                     </div>
                 </div>
 
                 <div class="control-group section">
                     <div class="group-header">
-                        <h2>Équipement</h2>
+                        <h2>⚙️ Équipement disponible</h2>
                         <label class="switch"><input type="checkbox" id="t-equip" name="toggle_equip" aria-label="Activer équipement" checked><span class="slider"></span></label>
                     </div>
                     <div class="group-content equipment-grid" id="c-equip">
-                        <div class="equip-card" data-equip="Four">Four</div>
-                        <div class="equip-card" data-equip="Micro-onde">Micro-onde</div>
-                        <div class="equip-card" data-equip="Airfryer">Airfryer</div>
-                        <div class="equip-card" data-equip="Plaques">Plaques de cuisson</div>
+                        <div class="equip-card" data-equip="Four">♨️ Four</div>
+                        <div class="equip-card" data-equip="Micro-onde">⚡ Micro-onde</div>
+                        <div class="equip-card" data-equip="Airfryer">🌪️ Airfryer</div>
+                        <div class="equip-card" data-equip="Plaques">🍳 Plaques de cuisson</div>
                     </div>
                 </div>
 
                 <div class="control-group section">
                     <div class="group-header">
-                        <h2>Profil & Cuisson</h2>
+                        <h2>👤 Profil & Configuration</h2>
                         <label class="switch"><input type="checkbox" id="t-diet" name="toggle_diet" aria-label="Activer profil et cuisson" checked><span class="slider"></span></label>
                     </div>
                     <div class="group-content" id="c-diet">
@@ -98,7 +115,7 @@
                     
                 <div class="control-group section">
                     <div class="group-header">
-                        <h2>Profil Culinaire</h2>
+                        <h2>🎛️ Paramètres de création</h2>
                         <label class="switch"><input type="checkbox" id="t-sliders" name="toggle_sliders" aria-label="Activer curseurs" checked><span class="slider"></span></label>
                     </div>
                     <div class="group-content" id="c-sliders">
@@ -124,25 +141,21 @@
 
         <main class="result-panel">
             
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 850px; margin-bottom: 15px;">
-                <div style="width: 44px; display: flex; justify-content: flex-start;">
-                    <button id="btn-favorite-recipe" class="btn-fav-star" style="display: none;" aria-label="Mettre en favori">☆</button>
-                </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 850px; margin-bottom: 15px; gap: 10px;">
+                <button id="btn-favorite-recipe" class="btn-fav-star" style="display: none;" aria-label="Mettre en favori">☆</button>
 
-                <div class="variation-tabs" id="variationTabsZone" style="display: none; margin-bottom: 0; flex: 1; justify-content: center;">
+                <div class="variation-tabs" id="variationTabsZone" style="display: none; margin-bottom: 0; flex: 1;">
                     <button class="var-tab active-variant" data-variant="original">✨ Original</button>
                     <button class="var-tab" data-variant="healthy">🌿 Healthy</button>
                     <button class="var-tab" data-variant="protein">💪 Protéiné</button>
                     <button class="var-tab" data-variant="gourmand">🧀 Gourmand</button>
                 </div>
 
-                <div style="width: 44px; display: flex; justify-content: flex-end;">
-                    <button id="btn-open-favorites" class="btn-bookmark" aria-label="Voir mes favoris" title="Mes recettes sauvegardées">
-                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                    </button>
-                </div>
+                <button id="btn-open-favorites" class="btn-bookmark" aria-label="Voir mes favoris" title="Mes recettes sauvegardées">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </button>
             </div>
 
             <div class="mrcook-layout" id="recipeCard">
