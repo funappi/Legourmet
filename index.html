@@ -63,7 +63,8 @@
                                     <option value="Caraïbes & Créole (Fusion Afrique-Europe-Amérindien, Chaleur)">🏝️ Caraïbes & Créole</option>
                                     <option value="Océanie & Pacifique (Feu de terre, Coco)">🌊 Océanie & Pacifique</option>
                                 </select>
-                                <div style="width: 30px;"></div> </div>
+                                <div style="width: 30px;"></div> 
+                            </div>
                         </div>
                         <button id="add-fusion-btn" class="add-circular-btn" aria-label="Ajouter une cuisine fusion" title="Croiser avec une autre origine">+</button>
                     </div>
@@ -88,6 +89,15 @@
                         <label class="switch"><input type="checkbox" id="t-diet" name="toggle_diet" aria-label="Activer profil et cuisson" checked><span class="slider"></span></label>
                     </div>
                     <div class="group-content" id="c-diet">
+                        
+                        <div style="margin-bottom: 20px;">
+                            <label class="slider-label" style="margin-bottom: 8px; display: block;">Type de Plat</label>
+                            <div class="equipment-grid">
+                                <div class="type-card active" data-type="Salé">🧂 Salé</div>
+                                <div class="type-card" data-type="Sucré">🍩 Sucré</div>
+                            </div>
+                        </div>
+                        
                         <div style="margin-bottom: 20px;">
                             <label class="slider-label" style="margin-bottom: 8px; display: block;">Régime Alimentaire</label>
                             <div class="equipment-grid">
@@ -97,6 +107,7 @@
                                 <div class="diet-card" data-diet="Sans Lactose">🥛 Sans Lactose</div>
                             </div>
                         </div>
+                        
                         <div>
                             <label class="slider-label" style="margin-bottom: 8px; display: block;">Mode de Cuisson Cible</label>
                             <div class="equipment-grid">
