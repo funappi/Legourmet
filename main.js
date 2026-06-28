@@ -6,8 +6,6 @@ const AppState = {
     favoris: JSON.parse(localStorage.getItem("lg_favs") || "[]")
 };
 
-const BACKEND_URL = "https://alexoff59.pythonanywhere.com";
-
 // ==========================================
 // 🛠️ UTILITAIRES DOM & UI CENTRALISÉS
 // ==========================================
