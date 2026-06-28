@@ -1,146 +1,126 @@
-// main.js - Version Fusionnée (Fonctionnalités V2 + Architecture V1)
-window.activeRecipePack = null;
-window.currentSelectedVariant = "original";
-window.currentPortions = 1;
+// main.js - Version Senior Spécialiste (Zéro Omission, DRY & Modulaire)
+const AppState = {
+    activeRecipePack: null,
+    currentSelectedVariant: "original",
+    currentPortions: 1,
+    favoris: JSON.parse(localStorage.getItem("lg_favs") || "[]")
+};
 
-window.currentHardware = "Aucun";
-window.currentComplex = "Amateur";
-window.currentRisk = "Original";
+const BACKEND_URL = "https://alexoff59.pythonanywhere.com";
 
-// Mémoire locale
-let favorisRecettes = JSON.parse(localStorage.getItem("lg_favs") || "[]");
+// ==========================================
+// 🛠️ UTILITAIRES DOM & UI CENTRALISÉS
+// ==========================================
+const DOM = {
+    get: id => document.getElementById(id),
+    getAll: selector => document.querySelectorAll(selector),
+    toggle: (el, condition, className = 'hidden-mode') => {
+        if(el) condition ? el.classList.remove(className) : el.classList.add(className);
+    }
+};
+
+const UIManager = {
+    setLoading: (isLoading, text = "Chargement...") => {
+        const loader = DOM.get("loading-display");
+        const loaderText = loader?.querySelector("h2");
+        if (loaderText) loaderText.innerText = text;
+        DOM.toggle(loader, isLoading);
+        const btn = DOM.get("btn-generate");
+        if (btn) btn.disabled = isLoading;
+    },
+    closeSidebar: () => DOM.get("mainAppContainer")?.classList.add("sidebar-collapsed"),
+    openSidebar: () => DOM.get("mainAppContainer")?.classList.remove("sidebar-collapsed"),
+    toggleModal: (modalId, show) => DOM.toggle(DOM.get(modalId), show)
+};
 
 document.addEventListener("DOMContentLoaded", () => {
     
-    // --- 1. UI & MENUS ---
-    const appContainer = document.getElementById("mainAppContainer");
-    const burgerToggle = document.getElementById("burger-toggle");
-    const closeSidebarBtn = document.getElementById("close-sidebar-btn");
+    // --- 1. MENUS & THÈME ---
+    DOM.get("burger-toggle")?.addEventListener("click", UIManager.openSidebar);
+    DOM.get("close-sidebar-btn")?.addEventListener("click", UIManager.closeSidebar);
     
-    if (burgerToggle && appContainer) {
-        burgerToggle.addEventListener("click", () => {
-            appContainer.classList.remove("sidebar-collapsed");
-        });
-    }
-    
-    if (closeSidebarBtn && appContainer) {
-        closeSidebarBtn.addEventListener("click", () => {
-            appContainer.classList.add("sidebar-collapsed");
-        });
-    }
+    DOM.get("theme-toggle")?.addEventListener("click", () => {
+        const root = document.documentElement;
+        root.dataset.theme = root.dataset.theme === "light" ? "dark" : "light";
+    });
 
-    const themeBtn = document.getElementById("theme-toggle");
-    if (themeBtn) {
-        themeBtn.addEventListener("click", () => {
-            const root = document.documentElement;
-            root.dataset.theme = root.dataset.theme === "light" ? "dark" : "light";
-        });
-    }
+    // --- 2. LOGIQUE GÉNÉRIQUE DES CARTES SÉLECTIONNABLES (D.R.Y) ---
+    function setupSelectableCards(selector, containerId, isMultiple = false) {
+        DOM.getAll(selector).forEach(card => {
+            card.addEventListener('click', () => {
+                const container = DOM.get(containerId);
+                if (!container || container.classList.contains('disabled')) return;
 
-    // --- 2. TOGGLES & CATÉGORIES ---
-    const linkages = [
-        { t: 't-ing', c: 'c-ing' },
-        { t: 't-fusion', c: 'c-fusion' },
-        { t: 't-equip', c: 'c-equip' },
-        { t: 't-sliders', c: 'c-sliders' },
-        { t: 't-diet', c: 'c-diet' }
-    ];
-
-    linkages.forEach(link => {
-        const toggle = document.getElementById(link.t);
-        const content = document.getElementById(link.c);
-        if (toggle && content) {
-            toggle.addEventListener("change", () => {
-                content.classList.toggle("disabled", !toggle.checked);
+                if (!isMultiple) {
+                    if (card.classList.contains('active')) {
+                        card.classList.remove('active');
+                    } else {
+                        DOM.getAll(selector).forEach(c => c.classList.remove('active'));
+                        card.classList.add('active');
+                    }
+                } else {
+                    card.classList.toggle('active');
+                }
             });
+        });
+    }
+
+    setupSelectableCards('.equip-card', 'c-equip', true);  
+    setupSelectableCards('.type-card', 'c-diet', false);   
+    setupSelectableCards('.diet-card', 'c-diet', false);   
+    setupSelectableCards('.style-card', 'c-diet', false);  
+
+    // --- 3. LINKAGES ON/OFF ---
+    ['ing', 'fusion', 'equip', 'sliders', 'diet'].forEach(id => {
+        DOM.get(`t-${id}`)?.addEventListener("change", (e) => {
+            DOM.get(`c-${id}`)?.classList.toggle("disabled", !e.target.checked);
+        });
+    });
+
+    // --- 4. SLIDERS & PORTIONS ---
+    const dicts = {
+        risk: ["Classique", "Original", "Aventure"],
+        time: ["Fast Food", "Amateur", "Guide Michelin"]
+    };
+    
+    ['risk', 'time'].forEach(type => {
+        DOM.get(`slider-${type}`)?.addEventListener('input', (e) => {
+            DOM.get(`${type}-val`).innerText = dicts[type][e.target.value - 1];
+        });
+    });
+
+    DOM.get("btn-plus")?.addEventListener("click", () => updatePortions(1));
+    DOM.get("btn-minus")?.addEventListener("click", () => updatePortions(-1));
+
+    function updatePortions(modifier) {
+        const newPortion = AppState.currentPortions + modifier;
+        if (newPortion >= 1) {
+            AppState.currentPortions = newPortion;
+            DOM.get("portion-display").innerText = AppState.currentPortions;
+            if(AppState.activeRecipePack) window.renderSelectedVariant(AppState.currentSelectedVariant);
         }
-    });
+    }
 
-    // --- 3. SÉLECTIONS DES CARDS ---
-    document.querySelectorAll('.equip-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const equipContainer = document.getElementById('c-equip');
-            if (equipContainer && !equipContainer.classList.contains('disabled')) {
-                card.classList.toggle('active');
-            }
-        });
-    });
-
-    document.querySelectorAll('.diet-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const dietContainer = document.getElementById('c-diet');
-            if (dietContainer && !dietContainer.classList.contains('disabled')) {
-                if (card.classList.contains('active')) {
-                    card.classList.remove('active');
-                } else {
-                    document.querySelectorAll('.diet-card').forEach(c => c.classList.remove('active'));
-                    card.classList.add('active');
-                }
-            }
-        });
-    });
-
-    document.querySelectorAll('.style-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const dietContainer = document.getElementById('c-diet');
-            if (dietContainer && !dietContainer.classList.contains('disabled')) {
-                if (card.classList.contains('active')) {
-                    card.classList.remove('active');
-                } else {
-                    document.querySelectorAll('.style-card').forEach(c => c.classList.remove('active'));
-                    card.classList.add('active');
-                }
-            }
-        });
-    });
-
-    // --- 4. SLIDERS ---
-    const riskLevels = { "1": "Classique", "2": "Original", "3": "Aventure" };
-    const timeLevels = { "1": "Fast Food", "2": "Amateur", "3": "Guide Michelin" };
-    
-    document.getElementById('slider-risk')?.addEventListener('input', (e) => {
-        document.getElementById('risk-val').innerText = riskLevels[e.target.value];
-    });
-    
-    document.getElementById('slider-time')?.addEventListener('input', (e) => {
-        document.getElementById('time-val').innerText = timeLevels[e.target.value];
-    });
-
-    // --- 5. ONGLETS DE VARIATIONS & PORTIONS ---
-    document.querySelectorAll(".var-tab").forEach(tab => {
+    // --- 5. GESTION DES ONGLETS RECETTE ---
+    DOM.getAll(".var-tab").forEach(tab => {
         tab.addEventListener("click", () => {
-            if (!window.activeRecipePack) return;
-            document.querySelectorAll(".var-tab").forEach(t => t.classList.remove("active-variant"));
+            if (!AppState.activeRecipePack) return;
+            DOM.getAll(".var-tab").forEach(t => t.classList.remove("active-variant"));
             tab.classList.add("active-variant");
-            window.currentSelectedVariant = tab.dataset.variant;
-            window.renderSelectedVariant(window.currentSelectedVariant);
+            AppState.currentSelectedVariant = tab.dataset.variant;
+            window.renderSelectedVariant(AppState.currentSelectedVariant);
         });
     });
 
-    document.getElementById("btn-plus")?.addEventListener("click", () => {
-        window.currentPortions++;
-        document.getElementById("portion-display").innerText = window.currentPortions;
-        if(window.activeRecipePack) window.renderSelectedVariant(window.currentSelectedVariant);
-    });
-    
-    document.getElementById("btn-minus")?.addEventListener("click", () => {
-        if (window.currentPortions > 1) {
-            window.currentPortions--;
-            document.getElementById("portion-display").innerText = window.currentPortions;
-            if(window.activeRecipePack) window.renderSelectedVariant(window.currentSelectedVariant);
-        }
-    });
-
-    // --- 6. GESTION DU MENU MULTI-FUSION (Issue de la V2) ---
-    document.getElementById("add-fusion-btn")?.addEventListener("click", () => {
-        const fusionList = document.getElementById("fusion-list");
-        if (fusionList && fusionList.children.length < 4) { // Bride de sécurité à 4
+    // --- 6. GESTION FUSION DYNAMIQUE ---
+    DOM.get("add-fusion-btn")?.addEventListener("click", () => {
+        const fusionList = DOM.get("fusion-list");
+        if (fusionList && fusionList.children.length < 4) {
             const newRow = document.createElement("div");
             newRow.className = "fusion-row";
             newRow.style.cssText = "display: flex; gap: 10px; align-items: center; margin-top: 10px;";
             
-            const originalSelect = fusionList.querySelector('.fusion-select');
-            const selectClone = originalSelect.cloneNode(true);
+            const selectClone = fusionList.querySelector('.fusion-select').cloneNode(true);
             selectClone.value = ""; 
             
             const deleteBtn = document.createElement("button");
@@ -149,330 +129,236 @@ document.addEventListener("DOMContentLoaded", () => {
             deleteBtn.title = "Supprimer";
             deleteBtn.onclick = () => newRow.remove();
 
-            newRow.appendChild(selectClone);
-            newRow.appendChild(deleteBtn);
+            newRow.append(selectClone, deleteBtn);
             fusionList.appendChild(newRow);
         }
     });
 
-    // --- 7. MOTEUR DE GÉNÉRATION & PAYLOAD ---
-    const btnGenerate = document.getElementById("btn-generate");
-    const loadingDisplay = document.getElementById("loading-display");
-    const loadingText = loadingDisplay?.querySelector("h2");
-    const ideasModal = document.getElementById("ideas-modal-overlay");
-    const ideasContainer = document.getElementById("ideas-container");
+    // --- 7. MOTEUR API (PAYLOAD & FETCH) ---
+    function buildPayload() {
+        const extractActiveData = (selector, attr) => Array.from(DOM.getAll(`${selector}.active`)).map(el => el.dataset[attr]);
+        const isChecked = id => DOM.get(`t-${id}`)?.checked;
+        
+        const hardware = isChecked('equip') ? extractActiveData('.equip-card', 'equip') : [];
+        const fusionValues = isChecked('fusion') ? Array.from(DOM.getAll('.fusion-select')).map(s => s.value).filter(v => v) : [];
+        
+        const hasIngredients = isChecked('ing') && window.selectedIngredients && 
+                               (window.selectedIngredients.base?.size > 0 || 
+                                window.selectedIngredients.protein?.size > 0 || 
+                                window.selectedIngredients.vegetable?.size > 0 || 
+                                window.selectedIngredients["anti-gaspi"]?.size > 0);
 
-    function getFormPayload() {
-        const hardware = [];
-        document.querySelectorAll('.equip-card.active').forEach(el => hardware.push(el.getAttribute('data-equip')));
+        let ingredientsPack = [];
+        if (hasIngredients) {
+            if (window.selectedIngredients["anti-gaspi"]) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients["anti-gaspi"]));
+            if (window.selectedIngredients.base) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.base));
+            if (window.selectedIngredients.protein) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.protein));
+            if (window.selectedIngredients.vegetable) ingredientsPack = ingredientsPack.concat(Array.from(window.selectedIngredients.vegetable));
+        } else {
+            ingredientsPack = ["Auto_FoodPairing"];
+        }
 
-        const hasIngredients = document.getElementById('t-ing')?.checked && window.selectedIngredients && window.selectedIngredients.base?.size > 0;
-        let ingredientsPack = hasIngredients ? Array.from(window.selectedIngredients.base) : ["Auto_FoodPairing"];
-
-        const fusionSelects = document.querySelectorAll('.fusion-select');
-        const fusionValues = [];
-        fusionSelects.forEach(select => {
-            if(select.value && select.value !== "") fusionValues.push(select.value);
-        });
         const fusionString = fusionValues.length > 0 ? fusionValues.join(" + ") : "Auto_FoodPairing";
 
-        const riskVal = document.getElementById('risk-val');
-        const timeVal = document.getElementById('time-val');
+        window.currentHardware = isChecked('equip') && hardware.length > 0 ? hardware.join(', ') : "Libre";
+        window.currentComplex = isChecked('sliders') ? DOM.get('time-val').innerText : "Amateur";
+        window.currentRisk = isChecked('sliders') ? DOM.get('risk-val').innerText : "Original";
 
-        window.currentHardware = document.getElementById('t-equip')?.checked && hardware.length > 0 ? hardware.join(', ') : "Libre";
-        window.currentComplex = document.getElementById('t-sliders')?.checked && timeVal ? timeVal.innerText : "Amateur";
-        window.currentRisk = document.getElementById('t-sliders')?.checked && riskVal ? riskVal.innerText : "Original";
+        const inspiration = DOM.get("simple-prompt-input")?.value.trim();
 
-        const inspiration = document.getElementById("simple-prompt-input")?.value.trim();
-
-        // Directive avancée (V2)
         let levelPromptSystem = hasIngredients 
-            ? "INSTRUCTION STRICTE : Tu DOIS construire une recette réaliste centrée sur les ingrédients fournis par l'utilisateur. Ne rajoute aucun ingrédient central majeur non listé."
+            ? "INSTRUCTION STRICTE : Tu DOIS construire une recette réaliste centrée sur les ingrédients fournis par l'utilisateur. Ne rajoute aucun ingrédient central majeur non listé (sauf sel, poivre, huile)."
             : "INSTRUCTION CRÉATIVE : Tu es un chef créatif libre d'imaginer le meilleur plat possible.";
 
         if (inspiration && inspiration.length > 0) {
             levelPromptSystem += `\n🚨 PRIORITÉ ABSOLUE (INSPIRATION) : L'utilisateur a demandé : "${inspiration}". La recette DOIT obligatoirement répondre à ce besoin précis.`;
         }
-
         if (fusionString !== "Auto_FoodPairing") {
-            levelPromptSystem += `\n🌍 FUSION GÉOGRAPHIQUE : La recette s'inspire de ces régions : ${fusionString}. INSTRUCTION CRUCIALE : Tu DOIS obligatoirement intégrer 2 à 3 ingrédients phares emblématiques de ces zones.`;
+            levelPromptSystem += `\n🌍 FUSION GÉOGRAPHIQUE : La recette s'inspire de ces régions : ${fusionString}. INSTRUCTION CRUCIALE : Tu DOIS obligatoirement intégrer 2 à 3 ingrédients phares emblématiques de ces zones pour bien marquer l'inspiration du plat.`;
         }
-
         if (window.currentComplex === "Fast Food") {
-            levelPromptSystem += " Agis en chef street-food (rapide, moins de 20 min).";
+            levelPromptSystem += " Agis en chef street-food : recette extrêmement rapide (moins de 20 min), gourmande, utilisant un minimum de vaisselle (One-Pot).";
         } else if (window.currentComplex === "Guide Michelin") {
-            levelPromptSystem += " Agis en chef étoilé (techniques complexes, dressage pro).";
+            levelPromptSystem += " Agis en chef triplement étoilé : recette technique, sophistiquée, avec des textures contrastées, réduction de sauce, dressage artistique minutieux.";
         } else {
-            levelPromptSystem += " Agis en chef passionné (convivial, clair).";
+            levelPromptSystem += " Agis en chef amateur passionné : propose une recette conviviale, équilibrée, avec des étapes claires et accessibles.";
         }
-
-        const activeDietCard = document.querySelector('.diet-card.active');
-        const activeStyleCard = document.querySelector('.style-card.active');
 
         return {
             mode: "Avancé",
-            simple_prompt: inspiration || "Repas surprise",
+            simple_prompt: inspiration || "Repas surprise du chef",
             ingredients: ingredientsPack,
             fusion: fusionString,
-            equipment: document.getElementById("t-equip")?.checked && hardware.length > 0 ? hardware : ["Auto_FoodPairing"],
+            equipment: hardware.length > 0 ? hardware : ["Auto_FoodPairing"],
             risk: window.currentRisk,
             time: window.currentComplex,
             chef_instruction_directive: levelPromptSystem,
-            diet_profile: document.getElementById('t-diet')?.checked ? (activeDietCard ? activeDietCard.dataset.diet : "Aucun") : "Aucun",
-            cooking_style: document.getElementById('t-diet')?.checked ? (activeStyleCard ? activeStyleCard.dataset.style : "Libre") : "Libre"
+            dish_type: isChecked('diet') ? extractActiveData('.type-card', 'type')[0] || "Salé" : "Salé",
+            diet_profile: isChecked('diet') ? extractActiveData('.diet-card', 'diet')[0] || "Aucun" : "Aucun",
+            cooking_style: isChecked('diet') ? extractActiveData('.style-card', 'style')[0] || "Libre" : "Libre"
         };
     }
 
-    async function fetchIdeas() {
-        if (!btnGenerate) return;
-        btnGenerate.disabled = true;
-        btnGenerate.innerText = "Recherche d'inspirations...";
-        
-        document.getElementById("recipeCard").classList.remove("show");
-        document.getElementById("variationTabsZone").style.display = "none";
-        
-        const btnFavStar = document.getElementById("btn-favorite-recipe");
+    async function apiRequest(endpoint, payload, loadingMessage) {
+        UIManager.setLoading(true, loadingMessage);
+        try {
+            const response = await fetch(`${BACKEND_URL}/${endpoint}`, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error(error);
+            alert("⚠️ Problème de connexion avec le serveur culinaire !");
+            return null;
+        } finally {
+            UIManager.setLoading(false);
+            const btn = DOM.get("btn-generate");
+            if (btn) btn.innerText = "Cuisiner 🚀";
+        }
+    }
+
+    DOM.get("btn-generate")?.addEventListener("click", async () => {
+        DOM.get("recipeCard").classList.remove("show");
+        DOM.get("variationTabsZone").style.display = "none"; // Reset visuel pendant le chargement
+        const btnFavStar = DOM.get("btn-favorite-recipe");
         if (btnFavStar) btnFavStar.style.display = "none";
         
-        if (loadingText) loadingText.innerText = "Recherche de 3 idées de plats...";
-        if (loadingDisplay) { 
-            loadingDisplay.classList.remove("hidden-mode"); 
-            loadingDisplay.style.display = "block"; 
-        }
+        const data = await apiRequest('generate-ideas', buildPayload(), "Recherche d'inspirations...");
+        
+        if (data?.ideas?.length) {
+            const container = DOM.get("ideas-container");
+            container.innerHTML = data.ideas.map(idea => `
+                <div class="idea-card" data-title="${idea.title}">
+                    <h4>${idea.title}</h4><p>${idea.description}</p>
+                </div>
+            `).join('');
 
-        const payload = getFormPayload();
-
-        try {
-            const response = await fetch(`${BACKEND_URL}/generate-ideas`, {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(payload)
+            container.querySelectorAll('.idea-card').forEach(card => {
+                card.addEventListener('click', () => fetchFullRecipe(card.dataset.title));
             });
-
-            if (!response.ok) throw new Error("Erreur génération idées");
-            const data = await response.json();
-
-            if (ideasContainer && data.ideas && data.ideas.length > 0) {
-                ideasContainer.innerHTML = "";
-                data.ideas.forEach(idea => {
-                    const card = document.createElement("div");
-                    card.className = "idea-card";
-                    card.innerHTML = `<h4>${idea.title}</h4><p>${idea.description}</p>`;
-                    card.addEventListener("click", () => fetchFullRecipe(idea.title));
-                    ideasContainer.appendChild(card);
-                });
-                
-                if (loadingDisplay) { 
-                    loadingDisplay.classList.add("hidden-mode"); 
-                    loadingDisplay.style.display = "none"; 
-                }
-                
-                if (appContainer) appContainer.classList.add("sidebar-collapsed");
-                ideasModal?.classList.remove("hidden-mode");
-            }
-        } catch (err) {
-            console.error(err);
-            if (loadingDisplay) { 
-                loadingDisplay.classList.add("hidden-mode"); 
-                loadingDisplay.style.display = "none"; 
-            }
-            alert("⚠️ Le Chef a confondu le câble réseau avec un spaghetti ! Veuillez réessayer.");
-        } finally {
-            btnGenerate.disabled = false;
-            btnGenerate.innerText = "Cuisiner 🚀";
+            
+            UIManager.closeSidebar();
+            UIManager.toggleModal("ideas-modal-overlay", true);
         }
-    }
+    });
 
     async function fetchFullRecipe(selectedTitle) {
-        if (ideasModal) ideasModal.classList.add("hidden-mode");
-        if (loadingText) loadingText.innerText = "Le Chef élabore vos sauces et techniques...";
+        UIManager.toggleModal("ideas-modal-overlay", false);
         
-        if (loadingDisplay) { 
-            loadingDisplay.classList.remove("hidden-mode"); 
-            loadingDisplay.style.display = "block"; 
-        }
-
-        const payload = getFormPayload();
+        const payload = buildPayload();
         payload.selected_idea = selectedTitle;
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/generate-recipe`, {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) throw new Error("Erreur génération recette");
+        const data = await apiRequest('generate-recipe', payload, "Le Chef élabore vos sauces...");
+        if (data) {
+            AppState.activeRecipePack = data;
+            AppState.currentPortions = 1;
+            DOM.get("portion-display").innerText = "1";
+            DOM.get("variationTabsZone").style.display = "flex";
             
-            window.activeRecipePack = await response.json();
-            window.currentPortions = 1;
-            
-            const portionDisplay = document.getElementById("portion-display");
-            if (portionDisplay) portionDisplay.innerText = "1";
-            
-            const variationTabsZone = document.getElementById("variationTabsZone");
-            if (variationTabsZone) variationTabsZone.style.display = "flex";
-            
-            const origTab = document.querySelector('[data-variant="original"]');
+            const origTab = Array.from(DOM.getAll('.var-tab')).find(t => t.dataset.variant === "original");
             if (origTab) origTab.click();
-
-            if (appContainer) appContainer.classList.add("sidebar-collapsed");
-
-        } catch (err) {
-            console.error(err);
-            document.getElementById("recipeTitle").innerText = "🔥 En chasse après les ingrédients";
-            const stepsList = document.getElementById("stepsList");
-            if (stepsList) {
-                stepsList.innerHTML = `<p><strong>🚨 Alerte en cuisine :</strong> Le Chef court après un poulet. Reclique sur Cuisiner !</p>`;
-            }
-            document.getElementById("recipeCard").classList.add("show");
-        } finally {
-            if (loadingDisplay) { 
-                loadingDisplay.classList.add("hidden-mode"); 
-                loadingDisplay.style.display = "none"; 
-            }
+            
+            UIManager.closeSidebar();
         }
     }
 
-    if (btnGenerate) btnGenerate.addEventListener("click", fetchIdeas);
-    
-    document.getElementById("close-modal-btn")?.addEventListener("click", () => { 
-        ideasModal?.classList.add("hidden-mode"); 
-        if (appContainer) appContainer.classList.remove("sidebar-collapsed"); 
+    // --- 8. GESTION DES MODALES ---
+    ['close-modal-btn', 'retry-ideas-btn'].forEach(id => {
+        DOM.get(id)?.addEventListener('click', () => {
+            UIManager.toggleModal("ideas-modal-overlay", false);
+            UIManager.openSidebar();
+        });
     });
-    
-    document.getElementById("retry-ideas-btn")?.addEventListener("click", () => { 
-        ideasModal?.classList.add("hidden-mode"); 
-        if (appContainer) appContainer.classList.remove("sidebar-collapsed"); 
-        fetchIdeas(); 
-    });
-
-    // --- 8. FAVORIS ---
-    const favModal = document.getElementById("favorites-modal-overlay");
-    const btnOpenFavs = document.getElementById("btn-open-favorites");
-    const closeFavModalBtn = document.getElementById("close-fav-modal-btn");
-    const favsContainer = document.getElementById("favorites-container");
 
     function renderFavoritesModal() {
+        const favsContainer = DOM.get("favorites-container");
         if (!favsContainer) return;
         favsContainer.innerHTML = "";
         
-        if (favorisRecettes.length === 0) { 
+        if (AppState.favoris.length === 0) { 
             favsContainer.innerHTML = "<p style='color: var(--text-muted); text-align: center; padding: 20px;'>Aucune recette en favori.</p>"; 
             return; 
         }
 
-        favorisRecettes.forEach((fav, index) => {
+        AppState.favoris.forEach((fav, index) => {
             const card = document.createElement("div"); 
             card.className = "idea-card"; 
-            card.style.flexDirection = "row"; 
-            card.style.justifyContent = "space-between"; 
-            card.style.alignItems = "center";
+            card.style.cssText = "flex-direction: row; justify-content: space-between; align-items: center;";
             
-            const titleSpan = document.createElement("h4"); 
-            titleSpan.innerText = fav.title; 
-            titleSpan.style.margin = "0"; 
-            titleSpan.style.flex = "1";
+            card.innerHTML = `
+                <h4 style="margin:0; flex:1;">${fav.title}</h4>
+                <div style="display:flex; gap:10px;">
+                    <button class="control-btn btn-load-fav" style="border-color: var(--healthy-color); color: var(--healthy-color);">Cuisiner</button>
+                    <button class="control-btn btn-del-fav" style="border-color: var(--accent); color: var(--accent);">✖</button>
+                </div>
+            `;
             
-            const actionDiv = document.createElement("div"); 
-            actionDiv.style.display = "flex"; 
-            actionDiv.style.gap = "10px";
-
-            const btnLoad = document.createElement("button"); 
-            btnLoad.innerText = "Cuisiner"; 
-            btnLoad.className = "control-btn"; 
-            btnLoad.style.borderColor = "var(--healthy-color)"; 
-            btnLoad.style.color = "var(--healthy-color)";
-            btnLoad.onclick = (e) => { 
+            card.querySelector('.btn-load-fav').onclick = (e) => { 
                 e.stopPropagation(); 
-                loadFavoriteRecipe(fav); 
-            };
-
-            const btnDelete = document.createElement("button"); 
-            btnDelete.innerText = "✖"; 
-            btnDelete.className = "control-btn"; 
-            btnDelete.style.borderColor = "var(--accent)"; 
-            btnDelete.style.color = "var(--accent)";
-            btnDelete.onclick = (e) => {
-                e.stopPropagation(); 
-                favorisRecettes.splice(index, 1); 
-                localStorage.setItem("lg_favs", JSON.stringify(favorisRecettes)); 
-                renderFavoritesModal(); 
+                AppState.activeRecipePack = fav.pack;
+                AppState.currentPortions = 1;
+                DOM.get("portion-display").innerText = "1";
+                DOM.get("variationTabsZone").style.display = "flex";
+                UIManager.toggleModal("favorites-modal-overlay", false);
                 
-                if (window.activeRecipePack && window.activeRecipePack.original.title === fav.title) {
-                    const btnFavStar = document.getElementById("btn-favorite-recipe");
-                    if (btnFavStar) { 
-                        btnFavStar.innerHTML = "☆"; 
-                        btnFavStar.classList.remove("is-favorite"); 
-                    }
-                }
+                const origTab = Array.from(DOM.getAll('.var-tab')).find(t => t.dataset.variant === "original");
+                if (origTab) origTab.click();
+                
+                UIManager.closeSidebar();
+            };
+
+            card.querySelector('.btn-del-fav').onclick = (e) => {
+                e.stopPropagation(); 
+                AppState.favoris.splice(index, 1); 
+                localStorage.setItem("lg_favs", JSON.stringify(AppState.favoris)); 
+                renderFavoritesModal(); 
+                updateFavStarUI(DOM.get("recipeTitle").innerText);
             };
             
-            actionDiv.appendChild(btnLoad); 
-            actionDiv.appendChild(btnDelete); 
-            card.appendChild(titleSpan); 
-            card.appendChild(actionDiv); 
             favsContainer.appendChild(card);
         });
     }
 
-    if (btnOpenFavs) {
-        btnOpenFavs.addEventListener("click", () => { 
-            renderFavoritesModal(); 
-            if(favModal) favModal.classList.remove("hidden-mode"); 
-        });
-    }
+    DOM.get("btn-open-favorites")?.addEventListener("click", () => { 
+        renderFavoritesModal(); 
+        UIManager.toggleModal("favorites-modal-overlay", true); 
+    });
     
-    if (closeFavModalBtn) {
-        closeFavModalBtn.addEventListener("click", () => { 
-            if(favModal) favModal.classList.add("hidden-mode"); 
-        });
-    }
+    DOM.get("close-fav-modal-btn")?.addEventListener("click", () => { 
+        UIManager.toggleModal("favorites-modal-overlay", false); 
+    });
 
-    function loadFavoriteRecipe(favObj) {
-        window.activeRecipePack = favObj.pack; 
-        window.currentPortions = 1;
-        
-        const portionDisplay = document.getElementById("portion-display"); 
-        if (portionDisplay) portionDisplay.innerText = "1";
-        
-        document.getElementById("variationTabsZone").style.display = "flex";
-        
-        if (favModal) favModal.classList.add("hidden-mode");
-        
-        const origTab = document.querySelector('[data-variant="original"]'); 
-        if (origTab) origTab.click();
-        
-        if (appContainer) appContainer.classList.add("sidebar-collapsed");
-    }
+    // --- 9. ÉTOILE FAVORIS ---
+    const updateFavStarUI = (title) => {
+        const btn = DOM.get("btn-favorite-recipe");
+        if(!btn) return;
+        btn.style.display = "inline-block";
+        const isFav = AppState.favoris.some(f => f.title === title);
+        btn.innerHTML = isFav ? "★" : "☆";
+        btn.classList.toggle("is-favorite", isFav);
+    };
 
-    const btnFavStar = document.getElementById("btn-favorite-recipe");
-    if (btnFavStar) {
-        btnFavStar.addEventListener("click", () => {
-            if (!window.activeRecipePack) return;
-            const currentTitle = document.getElementById("recipeTitle").innerText;
-            const index = favorisRecettes.findIndex(fav => fav.title === currentTitle);
-            
-            if (index > -1) { 
-                favorisRecettes.splice(index, 1); 
-                btnFavStar.innerHTML = "☆"; 
-                btnFavStar.classList.remove("is-favorite"); 
-            } else { 
-                favorisRecettes.push({ title: currentTitle, pack: window.activeRecipePack }); 
-                btnFavStar.innerHTML = "★"; 
-                btnFavStar.classList.add("is-favorite"); 
-            }
-            
-            localStorage.setItem("lg_favs", JSON.stringify(favorisRecettes));
-        });
-    }
+    DOM.get("btn-favorite-recipe")?.addEventListener("click", () => {
+        if (!AppState.activeRecipePack) return;
+        const currentTitle = DOM.get("recipeTitle").innerText;
+        const index = AppState.favoris.findIndex(f => f.title === currentTitle);
+        
+        if (index > -1) AppState.favoris.splice(index, 1);
+        else AppState.favoris.push({ title: currentTitle, pack: AppState.activeRecipePack });
+        
+        localStorage.setItem("lg_favs", JSON.stringify(AppState.favoris));
+        updateFavStarUI(currentTitle);
+    });
 
-    // --- 9. EXPORTS ET SCREENSHOT ---
-    const btnShareScreenshot = document.getElementById("btn-share-screenshot");
+    // --- 10. MODULES D'EXPORTATIONS PREMIUM & CAPTURE ---
+    const btnShareScreenshot = DOM.get("btn-share-screenshot");
     if (btnShareScreenshot) {
         btnShareScreenshot.addEventListener("click", async () => {
-            const recipeCard = document.getElementById("recipeCard"); 
-            if (!recipeCard || !window.activeRecipePack) return;
+            const recipeCard = DOM.get("recipeCard"); 
+            if (!recipeCard || !AppState.activeRecipePack) return;
             
             const oldText = btnShareScreenshot.innerText; 
             btnShareScreenshot.innerText = "⚡ Immortalisation...";
@@ -496,11 +382,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const file = new File([blob], "ma-recette-le-gourmet.png", { type: "image/png" });
                     
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        await navigator.share({ 
-                            files: [file], 
-                            title: "Ma recette Le Gourmet 🍳", 
-                            text: "Je partage ma recette!" 
-                        });
+                        await navigator.share({ files: [file], title: "Ma recette Le Gourmet 🍳", text: "Je partage ma recette !" });
                     } else { 
                         const link = document.createElement("a"); 
                         link.download = "ma-recette-le-gourmet.png"; 
@@ -508,7 +390,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         link.click(); 
                     }
                 }, "image/png");
-                
             } catch (err) { 
                 console.error(err); 
                 if (actionsContainer) actionsContainer.style.display = "flex"; 
@@ -518,18 +399,16 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    const btnExportNotes = document.getElementById("btn-export-notes");
+    const btnExportNotes = DOM.get("btn-export-notes");
     if (btnExportNotes) {
         btnExportNotes.addEventListener("click", async () => {
-            if (!window.activeRecipePack) return;
-            
-            const data = window.activeRecipePack[window.currentSelectedVariant]; 
+            if (!AppState.activeRecipePack) return;
+            const data = AppState.activeRecipePack[AppState.currentSelectedVariant]; 
             if (!data) return;
             
-            let textOutput = `🛒 LISTE DE COURSES : ${data.title.toUpperCase()}\nPour ${window.currentPortions} personne(s)\n\n`;
-            
+            let textOutput = `🛒 LISTE DE COURSES : ${data.title.toUpperCase()}\nPour ${AppState.currentPortions} personne(s)\n\n`;
             data.ingredients.forEach(ing => { 
-                textOutput += `- [ ] ${(parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '')} ${ing.unit} ${ing.name}\n`; 
+                textOutput += `- [ ] ${(parseFloat(ing.qty) * AppState.currentPortions).toFixed(1).replace('.0', '')} ${ing.unit} ${ing.name}\n`; 
             });
             
             try {
@@ -544,74 +423,58 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (err) {}
         });
     }
-});
 
-// --- 10. MOTEUR DE RENDU INTERACTIF ---
-window.renderSelectedVariant = function(variantKey) {
-    const data = window.activeRecipePack[variantKey]; 
-    if (!data) return;
-    
-    document.querySelectorAll('.plate-glow').forEach(g => g.classList.remove('active'));
-    const glowTarget = document.getElementById(`glow-${variantKey}`); 
-    if (glowTarget) glowTarget.classList.add('active');
+    // --- 11. MOTEUR DE RENDU INTERACTIF ---
+    window.renderSelectedVariant = function(variantKey) {
+        const data = AppState.activeRecipePack[variantKey]; 
+        if (!data) return;
 
-    const keywords = data.title.split(' ').slice(0, 4).join('%20');
-    const plateImg = document.getElementById("plateImage");
-    
-    if(plateImg) { 
-        plateImg.style.backgroundImage = `url('https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${keywords}?width=400&height=400&nologo=true')`; 
-        const placeholder = document.getElementById("plate-placeholder"); 
-        if(placeholder) placeholder.style.display = "none"; 
-    }
+        DOM.getAll('.plate-glow').forEach(g => g.classList.remove('active'));
+        DOM.get(`glow-${variantKey}`)?.classList.add('active');
 
-    document.getElementById("recipeTitle").innerText = data.title || "Titre inconnu";
-    document.getElementById("p-time").innerText = data.prep_time ? `${data.prep_time} min` : "--";
-    document.getElementById("c-time").innerText = data.cook_time ? `${data.cook_time} min` : "--";
-    document.getElementById("t-time").innerText = data.total_time ? `${data.total_time} min` : "--";
-    
-    const rEquip = document.getElementById("r-equip"); 
-    if(rEquip) rEquip.innerText = window.currentHardware;
-    
-    const rComplex = document.getElementById("r-complex"); 
-    if(rComplex) rComplex.innerText = window.currentComplex;
-    
-    const rRisk = document.getElementById("r-risk"); 
-    if(rRisk) rRisk.innerText = window.currentRisk;
-    
-    document.getElementById("r-nova").innerText = `NOVA ${data.nova_score || '?'}`;
-    
-    if (data.macros) { 
-        document.getElementById("r-pro").innerText = data.macros.proteines || "--"; 
-        document.getElementById("r-lip").innerText = data.macros.lipides || "--"; 
-        document.getElementById("r-glu").innerText = data.macros.glucides || "--"; 
-    }
+        const keywords = data.title.split(' ').slice(0, 4).join('%20');
+        const plateImg = DOM.get("plateImage");
+        if(plateImg) { 
+            plateImg.style.backgroundImage = `url('https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${keywords}?width=400&height=400&nologo=true')`; 
+            DOM.toggle(DOM.get("plate-placeholder"), false); 
+        }
 
-    const ingList = document.getElementById("ingredientsList");
-    if (ingList && data.ingredients && Array.isArray(data.ingredients)) {
-        ingList.innerHTML = data.ingredients.map(ing => `<li><div class="custom-checkbox"></div> <label><strong>${(parseFloat(ing.qty) * window.currentPortions).toFixed(1).replace('.0', '')} ${ing.unit}</strong> ${ing.name}</label></li>`).join('');
-        ingList.querySelectorAll('li').forEach(li => li.addEventListener('click', () => li.classList.toggle('checked-item')));
-    }
+        DOM.get("recipeTitle").innerText = data.title || "Titre inconnu";
+        ['p-time', 'c-time', 't-time'].forEach(type => {
+            const key = type[0] === 't' ? 'total' : type === 'p-time' ? 'prep' : 'cook';
+            DOM.get(type).innerText = data[`${key}_time`] ? `${data[`${key}_time`]} min` : "--";
+        });
 
-    const stepsList = document.getElementById("stepsList");
-    if (stepsList && data.steps) {
-        if (Array.isArray(data.steps)) { 
+        DOM.get("r-equip").innerText = window.currentHardware;
+        DOM.get("r-complex").innerText = window.currentComplex;
+        DOM.get("r-risk").innerText = window.currentRisk;
+        DOM.get("r-nova").innerText = `NOVA ${data.nova_score || '?'}`;
+        
+        // Calcul dynamique et itératif des valeurs macro-nutritionnelles selon les portions
+        if (data.macros) { 
+            const calcMacro = valStr => {
+                if (!valStr || valStr === "--") return "--";
+                const num = parseFloat(valStr);
+                return isNaN(num) ? valStr : `${(num * AppState.currentPortions).toFixed(0)}${valStr.replace(/[0-9.]/g, '')}`;
+            };
+            DOM.get("r-pro").innerText = calcMacro(data.macros.proteines); 
+            DOM.get("r-lip").innerText = calcMacro(data.macros.lipides); 
+            DOM.get("r-glu").innerText = calcMacro(data.macros.glucides); 
+        }
+
+        const ingList = DOM.get("ingredientsList");
+        if (ingList && Array.isArray(data.ingredients)) {
+            ingList.innerHTML = data.ingredients.map(ing => `<li><div class="custom-checkbox"></div> <label><strong>${(parseFloat(ing.qty) * AppState.currentPortions).toFixed(1).replace('.0', '')} ${ing.unit}</strong> ${ing.name}</label></li>`).join('');
+            ingList.querySelectorAll('li').forEach(li => li.addEventListener('click', () => li.classList.toggle('checked-item')));
+        }
+
+        const stepsList = DOM.get("stepsList");
+        if (stepsList && Array.isArray(data.steps)) {
             stepsList.innerHTML = data.steps.map((step, idx) => `<p><strong>Étape ${idx + 1} :</strong> ${step}</p>`).join(''); 
             stepsList.querySelectorAll('p').forEach(p => p.addEventListener('click', () => p.classList.toggle('checked-step'))); 
-        } else {
-            stepsList.innerHTML = `<p>${data.steps}</p>`;
         }
-    }
 
-    const btnFavStar = document.getElementById("btn-favorite-recipe");
-    if (btnFavStar) {
-        btnFavStar.style.display = "inline-block";
-        if (favorisRecettes.some(fav => fav.title === data.title)) { 
-            btnFavStar.innerHTML = "★"; 
-            btnFavStar.classList.add("is-favorite"); 
-        } else { 
-            btnFavStar.innerHTML = "☆"; 
-            btnFavStar.classList.remove("is-favorite"); 
-        }
-    }
-    document.getElementById("recipeCard").classList.add("show");
-};
+        updateFavStarUI(data.title);
+        DOM.get("recipeCard").classList.add("show");
+    };
+});

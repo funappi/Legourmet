@@ -86,7 +86,7 @@ body {
 
 .result-panel { 
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start; 
-    /* Espace de 80px en haut pour éviter le menu burger sur PC & Mobile */
+    /* 🚀 AUGMENTATION DU PADDING TOP POUR DESCENDRE L'ÉTOILE SOUS LE BURGER */
     padding: 80px 20px 40px 20px; gap: 20px; flex-grow: 1; position: relative; max-height: 100vh;
     overflow-y: auto; background: radial-gradient(circle at 50% 50%, rgba(26, 31, 41, 0.3) 0%, rgba(0,0,0,0) 100%); 
 }
@@ -114,8 +114,10 @@ input:checked + .slider { background-color: var(--accent); }
 input:checked + .slider:before { transform: translateX(18px); }
 
 .equipment-grid, .diet-grid, .style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.equip-card, .diet-card, .style-card { background: rgba(0,0,0,0.15); border: 1px solid var(--border-glass); padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; font-size: 0.85rem; font-weight: 500; user-select: none; transition: 0.2s; }
-.equip-card.active, .diet-card.active, .style-card.active { border-color: var(--accent); background: rgba(244, 63, 94, 0.1); color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+
+/* 🚀 AJOUT DE .type-card DANS TOUTES LES DÉCLARATIONS GRAPHIQUES */
+.equip-card, .diet-card, .style-card, .type-card { background: rgba(0,0,0,0.15); border: 1px solid var(--border-glass); padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; font-size: 0.85rem; font-weight: 500; user-select: none; transition: 0.2s; }
+.equip-card.active, .diet-card.active, .style-card.active, .type-card.active { border-color: var(--accent); background: rgba(244, 63, 94, 0.1); color: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
 
 .btn-primary { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent) 0%, #ff7eb3 100%); border: none; border-radius: 10px; color: white; font-size: 1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px var(--accent-glow); transition: 0.2s;}
 .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(244, 63, 94, 0.5); }
@@ -155,7 +157,6 @@ textarea { min-height: 90px; resize: none; }
 .fusion-select:focus { border-color: var(--accent); outline: none; }
 .fusion-select option { background: var(--bg-dark); color: var(--text-light); }
 
-/* NOUVEAU BOUTON (+) ET CROIX DE SUPPRESSION (✕) */
 .add-circular-btn {
     background: transparent; color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.3);
     width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -168,7 +169,6 @@ textarea { min-height: 90px; resize: none; }
     width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; transition: 0.2s;
 }
 .remove-fusion-btn:hover { color: var(--accent); transform: scale(1.1); }
-
 
 #autocomplete-list { list-style: none; background: rgba(15, 23, 42, 0.98); border: 1px solid var(--border-glass); border-radius: 8px; max-height: 180px; overflow-y: auto; position: absolute; width: 100%; z-index: 1000; box-shadow: 0 12px 30px rgba(0,0,0,0.7); }
 #autocomplete-list li { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.85rem; color: #fff; transition: 0.2s;}
@@ -290,13 +290,18 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
     body, .app-container { height: auto; min-height: 100dvh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: none; width: 100vw; }
     .tools-panel { position: fixed; top: 0; left: 0; width: 100vw; min-width: unset; height: 100dvh; margin: 0; border-radius: 0; z-index: 10001; padding: 20px 15px; -webkit-overflow-scrolling: touch; margin-left: 0; transform: translateX(0); opacity: 1; }
     .app-container.sidebar-collapsed .tools-panel { margin-left: 0; transform: translateX(-100%); opacity: 0; }
-    .result-panel { width: 100vw; min-height: 100dvh; padding: 80px 12px 30px 12px; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+    
+    /* 🚀 AUGMENTATION PADDING MOBILE : Le contenu commence plus bas pour fuir le menu */
+    .result-panel { width: 100vw; min-height: 100dvh; padding: 90px 12px 30px 12px; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+    
     .mrcook-layout { padding: 20px 15px; width: 100%; }
     .mrcook-time-row { flex-wrap: wrap; gap: 8px; }
     .time-box { min-width: 30%; padding: 8px; }
     .plate-wrapper { width: min(100%, 240px); margin-bottom: 10px; }
     .recipe-split-columns { grid-template-columns: 1fr; gap: 20px; width: 100%; }
-    .equip-card, .diet-card, .style-card, .var-tab, .btn-primary, .control-btn, .close-sidebar-btn { touch-action: manipulation; padding: 12px 8px; }
+    
+    /* Intégration de .type-card pour mobile */
+    .equip-card, .diet-card, .style-card, .type-card, .var-tab, .btn-primary, .control-btn, .close-sidebar-btn { touch-action: manipulation; padding: 12px 8px; }
     .recipe-actions-container { margin-top: 15px; }
     .btn-bookmark, .btn-fav-star { width: 40px; height: 40px; }
 }
