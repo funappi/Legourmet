@@ -6,6 +6,8 @@ const AppState = {
     favoris: JSON.parse(localStorage.getItem("lg_favs") || "[]")
 };
 
+const BACKEND_URL = "https://alexoff59.pythonanywhere.com";
+
 // ==========================================
 // 🛠️ UTILITAIRES DOM & UI CENTRALISÉS
 // ==========================================
@@ -370,7 +372,33 @@ document.addEventListener("DOMContentLoaded", () => {
                     allowTaint: false, 
                     backgroundColor: "#11141a", 
                     scale: 2, 
-                    logging: false 
+                    logging: false,
+                    // 🚀 1. On simule un écran d'ordinateur de 1200px de large
+                    windowWidth: 1200, 
+                    // 🚀 2. On modifie le "clone" de la page juste avant la photo
+                    onclone: (clonedDoc) => {
+                        const clonedCard = clonedDoc.getElementById("recipeCard");
+                        if (clonedCard) {
+                            // On force la taille de la fiche recette à 850px
+                            clonedCard.style.width = "850px";
+                            clonedCard.style.maxWidth = "850px";
+                            clonedCard.style.margin = "0 auto";
+                            
+                            // On s'assure que la grille (Ingrédients / Étapes) est bien en 2 colonnes
+                            const splitCols = clonedCard.querySelector(".recipe-split-columns");
+                            if (splitCols) {
+                                splitCols.style.display = "grid";
+                                splitCols.style.gridTemplateColumns = "1fr 1.4fr";
+                                splitCols.style.gap = "35px";
+                            }
+                            
+                            // On répare le flex des temps (Préparation, Cuisson, Total)
+                            const timeRow = clonedCard.querySelector(".mrcook-time-row");
+                            if (timeRow) {
+                                timeRow.style.flexWrap = "nowrap";
+                            }
+                        }
+                    }
                 });
                 
                 if (actionsContainer) actionsContainer.style.display = "flex";
