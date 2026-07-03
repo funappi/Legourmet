@@ -1,4 +1,3 @@
-// main.js - Version Senior Spécialiste (Zéro Omission, DRY & Modulaire)
 const AppState = {
     activeRecipePack: null,
     currentSelectedVariant: "original",
