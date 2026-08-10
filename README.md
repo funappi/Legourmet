@@ -1,122 +1,100 @@
-Voici une version totalement épurée, anonymisée et sécurisée de ton fichier **`README.md`**. Tous tes détails personnels (comme ton pseudo exact, tes chemins de dossiers privés ou tes clés) ont été remplacés par des balises génériques (`VOTRE_PSEUDO`, `VOTRE_DOMAINE`).
+<div align="center">
 
-Tu peux copier-coller ce contenu directement à la racine de ton projet sur GitHub sans craindre d'exposer ta vie privée ou la sécurité de ton serveur :
+  <h1>🍳 Le Gourmet Premium</h1>
+  <p><b>Laboratoire d'Alchimie Culinaire Assisté par IA & Générateur Multi-Variantes</b></p>
 
-```markdown
-# 🍳 Le Gourmet Premium — Laboratoire Culinaire IA & Créateur de Saveurs
+  <p>
+    <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.10+" />
+    <img src="https://img.shields.io/badge/Flask-3.0-000000?style=for-the-badge&logo=flask&logoColor=white" alt="Flask 3.0" />
+    <img src="https://img.shields.io/badge/Groq_API-Llama_3.1_8B-f43f5e?style=for-the-badge&logo=openai&logoColor=white" alt="Groq Llama 3.1" />
+    <img src="https://img.shields.io/badge/SQLite3-Database-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite3" />
+    <img src="https://img.shields.io/badge/Frontend-Vanilla_JS_/_CSS3-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="Vanilla JS" />
+  </p>
 
-Le Gourmet Premium est une application web moderne reposant sur une architecture dégroupée (*Decoupled Architecture*). Elle révolutionne l'improvisation en cuisine grâce à l'intelligence artificielle en combinant un système d'autocomplétion basé sur une base de données locale, une analyse chromatique des saveurs, et une génération instantanée de recettes multi-variantes.
+  <p>
+    <i>Une application web full-stack d'alchimie culinaire. Transformez vos contraintes réelles (ingrédients du frigo, matériel disponible, régime et audace) en recettes gastronomiques déclinées en 4 variantes nutritionnelles.</i>
+  </p>
 
----
-
-## 🏗️ Architecture Globale du Système
-
-Pour garantir une vitesse d'exécution optimale, une sécurité totale des clés d'accès et une gratuité des infrastructures, le projet est divisé en deux entités indépendantes :
-
-* **Frontend (L'Interface) — GitHub Pages :** Hébergement statique et hautement performant contenant les interfaces utilisateur (HTML5 / CSS3), la gestion des thèmes et la logique d'interaction dynamique (JavaScript ES6).
-* **Backend (Le Cerveau) — API Flask :** Serveur d'API privé gérant les connexions sécurisées à l'infrastructure LLM, l'accès à la base de données relationnelle locale et le traitement des requêtes sans jamais exposer les clés secrètes au grand public.
-* **Automatisation (Le Majordome) — GitHub Actions :** Un pipeline CI/CD automatisé qui se charge de synchroniser le design, mais aussi de piloter le serveur à distance pour le maintenir en ligne indéfiniment de manière autonome (tâche planifiée Cron).
-
----
-
-## 🌟 Fonctionnalités Majeures
-
-* **Saisie Tri-Entrée Culinaire :** Moteur d'autocomplétion prédictif branché sur une base SQLite pour isoler finement les Féculents, Protéines et Légumes.
-* **Machine Anti-Gaspi :** Système de sélection interactive avec verrous physiques pour improviser intelligemment à partir des restes du réfrigérateur.
-* **Roue des Saveurs Chromatique :** Analyseur trigonométrique capturant graphiquement le profil aromatique ciblé (Frais, Épicé, Sucré, Umami) selon la position du curseur.
-* **Moteur Multi-Variantes LLM :** Inférence IA ultra-rapide via l'API Groq (Llama 3.1) générant simultanément 4 déclinaisons autonomes d'un même plat (*Original*, *Healthy*, *Protéiné*, *Gourmand*).
-* **Imagerie Culinaire Contextuelle :** Génération à la volée de photographies culinaires professionnelles et réalistes via l'API asynchrone de Pollinations.ai.
-* **Mr. Cook Widget :** Calculateur dynamique qui réajuste instantanément les quantités d'ingrédients, les temps de cuisson et les indicateurs nutritionnels selon le nombre de portions.
+</div>
 
 ---
 
-## 📂 Structure du Projet
+## 📖 Sommaire
 
-### 💻 Répertoire Frontend (Dépôt GitHub)
+- [À propos du projet](#-à-propos-du-projet)
+- [Fonctionnalités clés](#-fonctionnalités-clés)
+- [Architecture & Pipeline IA](#-architecture--pipeline-ia)
+- [Structure du Projet](#-structure-du-projet)
+- [Documentation de l'API REST](#-documentation-de-lapi-rest)
+- [Installation & Lancement Local](#-installation--lancement-local)
+- [Déploiement & CI/CD (GitHub Actions)](#-déploiement--cicd-github-actions)
+- [Design System & Thèmes](#-design-system--thèmes)
+
+---
+
+## 💡 À propos du projet
+
+**Le Gourmet Premium** résout le problème classique du *"Qu'est-ce qu'on mange ce soir ?"* en combinant la précision d'une base de données locale (SQLite) et la créativité d'un grand modèle de langage (Llama 3.1 via Groq API).
+
+Contrairement aux générateurs de recettes génériques :
+1. **Il respecte la réalité physique de votre cuisine** : Si vous n'avez qu'un *Airfryer* ou un *Micro-ondes*, l'IA réinvente la méthode de cuisson sans inventer d'étapes impossibles.
+2. **Il verrouille le domaine culinaire (Sucré / Salé)** : Impossible d'obtenir du poulet ou des lardons dans une crêpe ou un tiramisu protéiné.
+3. **Il décline chaque idée en 4 variantes scientifiques** : *Original*, *Healthy*, *Protéiné* et *Gourmand*.
+4. **Il ne ment pas sur la nutrition** : Les calories et macronutriments sont calculés ou vérifiés de manière déterministe via la base SQLite plutôt que d'être inventés par le LLM.
+
+---
+
+## 🌟 Fonctionnalités clés
+
+### 🧠 Moteur d'Idéation & de Déclinaison (2 Phases)
+* **Phase 1 — Idéation** : À partir de vos envies ou de vos restes, l'application génère **3 concepts culinaires uniques**. Si vous demandez un plat précis (ex: *"Lasagnes"*), le moteur verrouille ce choix et vous propose 3 déclinaisons de ce même plat.
+* **Phase 2 — Génération des 4 Variantes** : L'idée sélectionnée est déclinée simultanément en :
+  * **✨ Original** : La recette authentique avec un twist optionnel.
+  * **🌿 Healthy** : Réduction des sucres et gras ajoutés, enrichissement en fibres et légumes.
+  * **💪 Protéiné** : Augmentation significative de l'apport protéique avec des ingrédients adaptés au domaine (skyr/whey pour le sucré, volaille/œufs/tofu pour le salé).
+  * **🧀 Gourmand** : Accentuation du caractère riche et réconfortant.
+
+### 🍳 Filtres & Réalité de la Cuisine
+* **Matériel exclusif (Liste fermée)** : Four, Micro-ondes, Airfryer, Plaques de cuisson.
+* **Type de plat strict** : Verrouillage absolu Salé / Sucré.
+* **Profils & Régimes** : Végétarien, Végan, Sans Gluten, Sans Lactose.
+* **Styles de cuisson & Fusions** : Sauté au Wok, Mijoté, Vapeur, Papillote, Frit, Rôti, etc.
+* **Curseurs de personnalisation** : Audace culinaire (*Classique*, *Original*, *Aventure*) et Complexité (*Fast Food*, *Amateur*, *Michelin*).
+
+### 🛠️ Outils UX & Confort
+* **Mr. Cook Widget** : Calculateur dynamique de portions réajustant automatiquement les grammages en direct.
+* **Checklist interactive** : Cocher les ingrédients au fur et me mesure des courses et les étapes pendant la cuisine.
+* **Exportation Notes & Screenshot** : Copie de la liste de courses dans le presse-papier et génération d'une capture d'écran HD nettoyée (via `html2canvas`) adaptée au thème (Clair/Sombre).
+* **Système de Favoris** : Sauvegarde locale de vos recettes préférées dans le `localStorage`.
+
+---
+
+## 🏗️ Architecture & Pipeline IA
+
+Le système repose sur un **moteur hybride dégroupé** où Python joue le rôle d'arbitre déterministe et le LLM le rôle de créateur gastronomique.
+
 ```text
-.
-├── index.html          # Structure HTML5 sémantique de l'application
-├── style.css           # Design système, animations néons et défilements réactifs
-├── main.js             # Logique centrale, gestion des modes, des portions et du rendu
-├── inventory.js        # Moteur d'autocomplétion et d'injection des tags d'ingrédients
-└── .github/
-    └── workflows/
-        └── deploy.yml  # Robot d'automatisation et de maintenance temporelle
-
-```
-
-### 🐍 Répertoire Backend (Serveur Privé)
-
-```text
-/home/VOTRE_NOM_UTILISATEUR/
-├── app.py              # Serveur Flask, routage API, gestion CORS et requêtes Groq
-├── legourmet.db        # Base de données SQLite contenant les tables d'ingrédients
-└── .env                # FICHIER PRIVÉ (Clé API secrète - Ne jamais envoyer sur GitHub)
-
-```
-
----
-
-## 🛠️ Déploiement et Configuration Sécurisée
-
-### 1. Configuration du Serveur d'API
-
-1. Déposez les fichiers `app.py`, `legourmet.db` et votre fichier `.env` sur votre serveur d'hébergement Python.
-2. Installez l'environnement logiciel requis via votre terminal :
-```bash
-pip install flask flask-cors groq python-dotenv
-
-```
-
-
-3. Configurez votre point d'entrée WSGI en y incluant le chemin absolu vers votre dossier d'application pour lier correctement l'application Flask :
-```python
-import sys
-import os
-
-path = '/home/VOTRE_NOM_UTILISATEUR/'
-if path not in sys.path:
-    sys.path.append(path)
-
-from app import app as application
-
-```
-
-
-
-### 2. Isolation des Clés via les Secrets GitHub
-
-Pour que l'application puisse communiquer et s'automatiser sans écrire de données sensibles dans le code public, vous devez configurer les variables secrètes dans l'onglet **Settings** > **Secrets and variables** > **Actions** de votre dépôt GitHub :
-
-* `PA_USER` : Votre nom d'utilisateur serveur.
-* `PA_DOMAIN` : L'adresse URL de votre API backend (en minuscules).
-* `PA_API_TOKEN` : Le jeton d'authentification privé généré par votre hébergeur.
-
-### 3. Automatisation Intelligente (Zéro Maintenance)
-
-Le fichier `.github/workflows/deploy.yml` intègre un déclencheur temporel basé sur une tâche Cron :
-
-```yaml
-on:
-  push:
-    branches:
-      - main
-  schedule:
-    - cron: '0 0 * * 1' # Exécution automatique tous les lundis à minuit
-
-```
-
-Ce réveil hebdomadaire automatique ordonne à GitHub de se connecter à l'API de votre hébergeur pour valider la prolongation gratuite de votre serveur d'hébergement. **Le compteur de validité de votre application est ainsi repoussé à perpétuité dans le futur, garantissant un fonctionnement 100 % autonome sans aucune intervention humaine.**
-
----
-
-## 🖥️ Technologies et Protocoles Employés
-
-* **Langages :** HTML5, CSS3 Moderne, JavaScript (ES6+), Python 3.10, SQL (SQLite).
-* **Frameworks :** Flask 3.0 (Gestion d'API), Flask-CORS (Contournement des blocages de sécurité Cross-Origin).
-* **Modèles d'Intelligence Artificielle :** LLM Llama 3.1 (8B) via Groq Cloud API, Générateur d'images par diffusion Pollinations.ai.
-* **Sécurité :** Chiffrement asymétrique via les secrets de dépôt GitHub, isolation des clés locales via fichier `.env`.
-
-```
-
-```
+ ┌────────────────────────┐
+ │   FRONTEND (Client)    │
+ │ Vanilla JS / HTML / CSS│
+ └───────────┬────────────┘
+             │ 1. POST /generate-ideas
+             ▼
+ ┌────────────────────────┐      2. Prompt avec      ┌────────────────────────┐
+ │   SERVER FLASK (App)   │ ───────────────────────> │    LLM GROQ (Llama)    │
+ │                        │ <─────────────────────── │   Génération des 3     │
+ └───────────┬────────────┘      3. Réponses JSON    │        Idées               │
+             │                                       └────────────────────────┘
+             │ 4. Choix d'une idée par l'utilisateur
+             ▼
+ ┌────────────────────────┐      5. Master Prompt    ┌────────────────────────┐
+ │   SERVER FLASK (App)   │ ───────────────────────> │    LLM GROQ (Llama)    │
+ │   + Airbag Python      │ <─────────────────────── │  Génération 4 Variantes│
+ └───────────┬────────────┘      6. JSON Recettes    └────────────────────────┘
+             │
+             │ 7. Contrôle de cohérence (Verrou Sucré/Salé & Matériel)
+             │ 8. Calcul/Enrichissement des macros via SQLite
+             ▼
+ ┌────────────────────────┐
+ │   RENDU FICHE RECETTE  │
+ └────────────────────────┘
