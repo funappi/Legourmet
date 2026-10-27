@@ -169,3 +169,11 @@ Secrets GitHub requis : `PA_USER`, `PA_DOMAIN`, `PA_API_TOKEN`. Le workflow ne m
 - **Typographies** : Poppins (titres) et Inter (texte), chargées depuis Google Fonts.
 - **Style** : panneaux « verre dépoli » (classe `glass`) sur fond sombre ou clair.
 
+---
+
+## 📜 Licence
+
+Ce projet est distribué sous la licence [PolyForm Noncommercial 1.0.0](LICENSE) : utilisation, modification et partage libres pour tout **usage non commercial**.
+
+**Usage commercial : contacte-moi pour une licence séparée** — [Funappi](https://github.com/funappi).
+
