@@ -317,3 +317,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
     .recipe-actions-container { margin-top: 15px; }
     .btn-bookmark, .btn-fav-star { width: 40px; height: 40px; }
 }
+
+/* Crédit en bas du panneau de résultats */
+.credit { margin-top: auto; padding: 16px 0 4px; text-align: center; font-size: 0.75rem; color: var(--text-muted); }
+.credit a { color: inherit; text-decoration: underline; }
+.credit a:hover { color: var(--accent); }

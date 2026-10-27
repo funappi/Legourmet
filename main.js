@@ -1,3 +1,8 @@
+// Tout texte venant du LLM ou d'un favori stocké doit passer par là avant d'entrer dans innerHTML.
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, c => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+));
+
 const AppState = {
     activeRecipePack: null,
     currentSelectedVariant: "original",
@@ -228,8 +233,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data?.ideas?.length) {
             const container = DOM.get("ideas-container");
             container.innerHTML = data.ideas.map(idea => `
-                <div class="idea-card" data-title="${idea.title}">
-                    <h4>${idea.title}</h4><p>${idea.description}</p>
+                <div class="idea-card" data-title="${escapeHtml(idea.title)}">
+                    <h4>${escapeHtml(idea.title)}</h4><p>${escapeHtml(idea.description)}</p>
                 </div>
             `).join('');
 
@@ -286,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
             card.style.cssText = "flex-direction: row; justify-content: space-between; align-items: center;";
             
             card.innerHTML = `
-                <h4 style="margin:0; flex:1;">${fav.title}</h4>
+                <h4 style="margin:0; flex:1;">${escapeHtml(fav.title)}</h4>
                 <div style="display:flex; gap:10px;">
                     <button class="control-btn btn-load-fav" style="border-color: var(--healthy-color); color: var(--healthy-color);">Cuisiner</button>
                     <button class="control-btn btn-del-fav" style="border-color: var(--accent); color: var(--accent);">✖</button>
@@ -455,7 +460,7 @@ document.addEventListener("DOMContentLoaded", () => {
         DOM.getAll('.plate-glow').forEach(g => g.classList.remove('active'));
         DOM.get(`glow-${variantKey}`)?.classList.add('active');
 
-        const keywords = data.title.split(' ').slice(0, 4).join('%20');
+        const keywords = String(data.title || "plat").split(' ').slice(0, 4).map(encodeURIComponent).join('%20');
         const plateImg = DOM.get("plateImage");
         if(plateImg) { 
             plateImg.style.backgroundImage = `url('https://image.pollinations.ai/prompt/professional%20food%20photography%20of%20${keywords}?width=400&height=400&nologo=true')`; 
@@ -487,13 +492,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const ingList = DOM.get("ingredientsList");
         if (ingList && Array.isArray(data.ingredients)) {
-            ingList.innerHTML = data.ingredients.map(ing => `<li><div class="custom-checkbox"></div> <label><strong>${(parseFloat(ing.qty) * AppState.currentPortions).toFixed(1).replace('.0', '')} ${ing.unit}</strong> ${ing.name}</label></li>`).join('');
+            ingList.innerHTML = data.ingredients.map(ing => `<li><div class="custom-checkbox"></div> <label><strong>${(parseFloat(ing.qty) * AppState.currentPortions).toFixed(1).replace('.0', '')} ${escapeHtml(ing.unit)}</strong> ${escapeHtml(ing.name)}</label></li>`).join('');
             ingList.querySelectorAll('li').forEach(li => li.addEventListener('click', () => li.classList.toggle('checked-item')));
         }
 
         const stepsList = DOM.get("stepsList");
         if (stepsList && Array.isArray(data.steps)) {
-            stepsList.innerHTML = data.steps.map((step, idx) => `<p><strong>Étape ${idx + 1} :</strong> ${step}</p>`).join(''); 
+            stepsList.innerHTML = data.steps.map((step, idx) => `<p><strong>Étape ${idx + 1} :</strong> ${escapeHtml(step)}</p>`).join(''); 
             stepsList.querySelectorAll('p').forEach(p => p.addEventListener('click', () => p.classList.toggle('checked-step'))); 
         }
 
