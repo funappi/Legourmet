@@ -125,19 +125,22 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!container) return;
 
         // Création de l'élément HTML du Tag
+        // Construit en DOM (textContent) : le nom peut être une saisie libre de l'utilisateur.
         const chip = document.createElement("div");
         chip.className = "tag";
-        chip.innerHTML = `${name} <span data-name="${name}" data-cat="${category}" title="Supprimer">✕</span>`;
-        
+        chip.appendChild(document.createTextNode(`${name} `));
+        const closeBtn = document.createElement("span");
+        closeBtn.textContent = "✕";
+        closeBtn.title = "Supprimer";
+
         // Logique de suppression liée à la croix
-        chip.querySelector('span').addEventListener('click', (e) => {
-            const targetName = e.target.dataset.name;
-            const targetCat = e.target.dataset.cat;
-            if (window.selectedIngredients[targetCat]) {
-                window.selectedIngredients[targetCat].delete(targetName);
+        closeBtn.addEventListener('click', () => {
+            if (window.selectedIngredients[category]) {
+                window.selectedIngredients[category].delete(name);
             }
             chip.remove();
         });
+        chip.appendChild(closeBtn);
 
         container.appendChild(chip);
     }
