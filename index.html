@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Le Gourmet - Laboratoire d'Alchimie Culinaire Premium</title>
+    <script>try { var savedTheme = localStorage.getItem("lg_theme"); if (savedTheme === "light" || savedTheme === "dark") document.documentElement.dataset.theme = savedTheme; } catch (e) {}</script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="style.css">
@@ -38,7 +39,7 @@
                     <div class="group-content" id="c-ing">
                         <div class="input-tags-wrapper" id="ingredient-wrapper">
                             <div class="tags-inline-zone" id="tags-ingredients-container"></div>
-                            <input type="text" id="ingredient-input" data-category="base" class="ingredient-autocomplete-input inner-input" aria-label="Recherche d'ingrédient" placeholder="Ajouter un ingrédient...">
+                            <input type="text" id="ingredient-input" data-category="base" class="ingredient-autocomplete-input inner-input" aria-label="Recherche d'ingrédient" placeholder="Ajouter un ingrédient (Entrée pour valider)...">
                         </div>
                         <ul id="autocomplete-list" class="hidden-mode"></ul>
                     </div>
@@ -89,7 +90,16 @@
                         <label class="switch"><input type="checkbox" id="t-diet" name="toggle_diet" aria-label="Activer profil et cuisson" checked><span class="slider"></span></label>
                     </div>
                     <div class="group-content" id="c-diet">
-                        
+
+                        <div style="margin-bottom: 20px;">
+                            <label class="slider-label" style="margin-bottom: 8px; display: block;">Moment du Repas</label>
+                            <div class="course-grid">
+                                <div class="course-card" data-course="Entrée">🥗 Entrée</div>
+                                <div class="course-card" data-course="Plat">🍽️ Plat</div>
+                                <div class="course-card" data-course="Dessert">🍰 Dessert</div>
+                            </div>
+                        </div>
+
                         <div style="margin-bottom: 20px;">
                             <label class="slider-label" style="margin-bottom: 8px; display: block;">Type de Plat</label>
                             <div class="equipment-grid">
@@ -169,6 +179,30 @@
                 </button>
             </div>
 
+            <section class="welcome-screen" id="welcome-screen" aria-labelledby="welcome-title">
+                <div class="welcome-emoji" aria-hidden="true">🍳</div>
+                <h2 id="welcome-title" class="welcome-title">Que cuisine-t-on aujourd'hui ?</h2>
+                <p class="welcome-sub">Dis-moi ce que tu as sous la main ou ce dont tu as envie : le chef IA t'en tire une recette en 4 versions.</p>
+
+                <ol class="welcome-steps">
+                    <li><span class="welcome-step-num">1</span><span>Décris ton envie ou tes ingrédients</span></li>
+                    <li><span class="welcome-step-num">2</span><span>Choisis l'une des 3 idées proposées</span></li>
+                    <li><span class="welcome-step-num">3</span><span>Reçois ta recette : Original, Healthy, Protéiné, Gourmand</span></li>
+                </ol>
+
+                <p class="welcome-chips-label">Un coup de pouce ? Clique sur une idée :</p>
+                <div class="welcome-chips" id="welcome-chips">
+                    <button type="button" class="welcome-chip" data-prompt="Un bol de nouilles chaud et épicé d'inspiration asiatique">🍜 Bol de nouilles épicé</button>
+                    <button type="button" class="welcome-chip" data-prompt="Une entrée fraîche et légère qui impressionne les invités" data-course="Entrée">🥗 Entrée fraîche et légère</button>
+                    <button type="button" class="welcome-chip" data-prompt="Un repas riche en protéines après la salle de sport">💪 Repas protéiné post-salle</button>
+                    <button type="button" class="welcome-chip" data-prompt="Un plat réconfortant avec du fromage fondant">🧀 Plat réconfort au fromage</button>
+                    <button type="button" class="welcome-chip" data-prompt="Un dessert chocolaté prêt en 15 minutes" data-course="Dessert">🍫 Dessert choco en 15 min</button>
+                    <button type="button" class="welcome-chip" data-prompt="Une recette anti-gaspi avec des restes de poulet et de riz">♻️ Anti-gaspi poulet &amp; riz</button>
+                </div>
+
+                <button type="button" id="welcome-surprise-btn" class="btn-primary welcome-surprise">🎲 Surprends-moi</button>
+            </section>
+
             <div class="mrcook-layout" id="recipeCard">
                 <div class="recipe-top-header" style="text-align: center; margin-bottom: 25px;">
                     <h2 id="recipeTitle" class="main-recipe-title" style="margin-bottom: 20px;">Laboratoire Culinaire</h2>
@@ -182,8 +216,8 @@
                         <div class="plate" id="mainPlate">
                             <div class="plate-texture" id="plateImage"></div>
                             <div id="plate-placeholder" class="plate-placeholder-content">
-                                <span class="placeholder-icon">🔮</span>
-                                <p>Fusionne tes ingrédients pour lancer l'alchimie...</p>
+                                <span class="placeholder-icon" id="plate-placeholder-icon">🍽️</span>
+                                <p id="plate-placeholder-text">Photo du plat en préparation...</p>
                             </div>
                         </div>
                     </div>
@@ -242,10 +276,6 @@
                 </div>
             </div>
 
-            <div id="loading-display" class="hidden-mode loader-container">
-                <h2>Alchimie Culinaire en Cours...</h2>
-                <div class="spinner"></div>
-            </div>
             <footer class="credit">Made by <a href="https://github.com/orgs/funappi/repositories" target="_blank" rel="noopener noreferrer">Funappi</a></footer>
         </main>
     </div>
@@ -268,6 +298,28 @@
                 <button id="close-fav-modal-btn" class="close-modal-btn">✕</button>
             </div>
             <div id="favorites-container" class="ideas-list"></div>
+        </div>
+    </div>
+
+    <div id="loading-display" class="loading-overlay hidden-mode" role="dialog" aria-modal="true" aria-labelledby="loading-title">
+        <div class="loading-card glass" id="loading-card" tabindex="-1">
+            <div class="loading-steps" id="loading-steps" aria-hidden="true">
+                <span class="loading-step" data-step="1">1 · Idées</span>
+                <span class="loading-step-sep"></span>
+                <span class="loading-step" data-step="2">2 · Recette</span>
+            </div>
+
+            <div class="spinner loading-spinner" id="loading-spinner" aria-hidden="true"></div>
+            <h2 id="loading-title" class="loading-title" role="status" aria-live="polite">Alchimie Culinaire en Cours...</h2>
+            <p id="loading-quip" class="loading-quip" aria-hidden="true"></p>
+            <p id="loading-slow" class="loading-slow hidden-mode">Le serveur met un peu de temps à répondre : il se réveille peut-être. La première fois, ça peut prendre jusqu'à une minute.</p>
+
+            <p id="loading-error-text" class="loading-error-text hidden-mode" role="alert"></p>
+
+            <div class="loading-actions">
+                <button type="button" id="loading-retry-btn" class="btn-primary loading-retry hidden-mode">Réessayer</button>
+                <button type="button" id="loading-cancel-btn" class="control-btn loading-cancel">Annuler</button>
+            </div>
         </div>
     </div>
 

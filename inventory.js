@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const autocompleteList = document.getElementById("autocomplete-list");
     let debounceTimer = null;
     let currentActiveInput = null;
+    let searchId = 0;   // ignore les réponses d'autocomplétion devenues obsolètes
 
     if (inputs.length === 0 || !autocompleteList) {
         console.warn("Éléments de l'inventaire ou liste d'autocomplétion manquants dans le DOM.");
@@ -21,18 +22,36 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     inputs.forEach(input => {
+        // Entrée = valider ce qui est tapé comme tag libre ; Échap = fermer les suggestions
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                autocompleteList.classList.add("hidden-mode");
+                return;
+            }
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            const typed = input.value.trim();
+            const toggle = document.getElementById("t-ing");
+            if (typed.length < 2 || (toggle && !toggle.checked)) return;
+            clearTimeout(debounceTimer);
+            searchId++;
+            injectIngredientTag(typed, input.dataset.category || "base");
+            input.value = "";
+            autocompleteList.classList.add("hidden-mode");
+        });
+
         input.addEventListener("input", (e) => {
             clearTimeout(debounceTimer);
+            const currentSearch = ++searchId;
             autocompleteList.innerHTML = "";
             currentActiveInput = input;
-            
+
             const query = e.target.value.trim();
             // Récupération stricte de la catégorie avec repli par défaut
             const category = input.dataset.category || "base";
 
-            // Vérification de l'état des Toggles
-            const toggleId = (category === "base" || category === "protein" || category === "vegetable") ? "t-slots" : "t-ing";
-            const toggle = document.getElementById(toggleId);
+            // Si le bloc « Vos ingrédients » est désactivé, on ne propose rien
+            const toggle = document.getElementById("t-ing");
             if (toggle && !toggle.checked) return;
 
             // Déclenchement à partir de 2 caractères minimum
@@ -47,32 +66,36 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (!response.ok) return;
                     
                     const data = await response.json();
+                    // Réponse périmée (l'utilisateur a continué à taper ou validé avec Entrée)
+                    if (currentSearch !== searchId) return;
                     autocompleteList.innerHTML = "";
 
-                    if (data.length === 0) {
-                        // Cas 1 : Création d'un tag libre
+                    // Suggestions depuis l'API avec affichage de la catégorie source
+                    data.forEach(item => {
                         const li = document.createElement("li");
-                        li.innerText = `Ajouter le tag libre : "${query}"`;
+                        li.innerText = item.categorie ? `${item.nom} [${item.categorie}]` : `${item.nom}`;
                         li.addEventListener("click", () => {
-                            injectIngredientTag(query, category);
+                            injectIngredientTag(item.nom, category);
                             input.value = "";
                             autocompleteList.classList.add("hidden-mode");
                             input.focus(); // Confort UX
                         });
                         autocompleteList.appendChild(li);
-                    } else {
-                        // Cas 2 : Suggestions depuis l'API avec affichage de la catégorie source
-                        data.forEach(item => {
-                            const li = document.createElement("li");
-                            li.innerText = item.categorie ? `${item.nom} [${item.categorie}]` : `${item.nom}`;
-                            li.addEventListener("click", () => {
-                                injectIngredientTag(item.nom, category);
-                                input.value = "";
-                                autocompleteList.classList.add("hidden-mode");
-                                input.focus(); // Confort UX
-                            });
-                            autocompleteList.appendChild(li);
+                    });
+
+                    // Le tag libre reste toujours proposé (sauf si le texte tapé est déjà une suggestion exacte)
+                    const alreadySuggested = data.some(item => String(item.nom).toLowerCase() === query.toLowerCase());
+                    if (!alreadySuggested) {
+                        const free = document.createElement("li");
+                        free.className = "autocomplete-free";
+                        free.innerText = `Ajouter le tag libre : "${query}"`;
+                        free.addEventListener("click", () => {
+                            injectIngredientTag(query, category);
+                            input.value = "";
+                            autocompleteList.classList.add("hidden-mode");
+                            input.focus(); // Confort UX
                         });
+                        autocompleteList.appendChild(free);
                     }
 
                     // Positionnement intelligent via le wrapper parent s'il existe, sinon l'input
