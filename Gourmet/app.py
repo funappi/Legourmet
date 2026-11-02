@@ -119,6 +119,17 @@ def ingredients_clause(data):
     return f"Utilise harmonieusement les éléments suivants : {base}, {protein} et {vegetable}."
 
 
+def avoid_clause(data):
+    """Titres déjà proposés (bouton « Essaie encore » du front) : on demande d'autres plats."""
+    avoid = data.get("avoid_titles", [])
+    if not isinstance(avoid, list):
+        return ""
+    titles = [clean(t, 80) for t in avoid[:12] if isinstance(t, str) and t.strip()]
+    if not titles:
+        return ""
+    return f"- Idées DÉJÀ proposées, à ne PAS redonner (propose 3 plats différents) : {', '.join(titles)}."
+
+
 def equipment_clause(data):
     equipment = data.get("equipment", [])
     if isinstance(equipment, str):
@@ -227,6 +238,7 @@ def generate_ideas():
     - Prise de risque : {clean(data.get('risk', 'Original'), 30)}. Niveau de complexité : {clean(data.get('time', 'Amateur'), 30)}.
     - Envie exprimée par l'utilisateur : {inspiration or 'aucune, surprends-moi'}.
     {extra_constraints(data)}
+    {avoid_clause(data)}
 
     Renvoie UNIQUEMENT un objet JSON brut de cette forme, sans texte autour :
     {{"ideas": [{{"title": "Nom du plat", "description": "Une phrase appétissante"}}]}}"""
