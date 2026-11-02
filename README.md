@@ -59,6 +59,7 @@ Contrairement aux générateurs de recettes génériques :
 * **Type de plat strict** : Verrouillage absolu Salé / Sucré.
 * **Profils & Régimes** : Végétarien, Végan, Sans Gluten, Sans Lactose.
 * **Styles de cuisson & Fusions** : Sauté au Wok, Mijoté, Vapeur, Papillote, Frit, Rôti, etc.
+* **Moment du repas** : *Entrée*, *Plat* ou *Dessert* (Dessert bascule automatiquement sur Sucré).
 * **Curseurs de personnalisation** : Audace culinaire (*Classique*, *Original*, *Aventure*) et Complexité (*Fast Food*, *Amateur*, *Michelin*).
 
 ### 🛠️ Outils UX & Confort
@@ -66,6 +67,10 @@ Contrairement aux générateurs de recettes génériques :
 * **Checklist interactive** : Cocher les ingrédients au fur et à mesure des courses et les étapes pendant la cuisine.
 * **Exportation Notes & Screenshot** : Copie de la liste de courses dans le presse-papier et génération d'une capture d'écran HD nettoyée (via `html2canvas`) adaptée au thème (Clair/Sombre).
 * **Système de Favoris** : Sauvegarde locale de vos recettes préférées dans le `localStorage`.
+* **Écran d'accueil** : trois étapes, des idées cliquables qui pré-remplissent le champ d'inspiration et un bouton « Surprends-moi ».
+* **Écran de chargement plein écran** : étape en cours (1/2 idées, 2/2 recette), phrases d'attente, message si le serveur est lent, bouton Annuler. En cas d'échec (serveur injoignable, trop de requêtes, délai de 60 s dépassé), un message clair et un bouton Réessayer remplacent l'ancien `alert()`.
+* **« Essaie encore »** relance réellement la génération d'idées en évitant celles déjà vues (`avoid_titles`).
+* **Saisie des ingrédients** : `Entrée` valide le texte tapé comme tag libre, qui reste toujours proposé dans les suggestions. Le thème choisi est mémorisé.
 
 ---
 
@@ -128,7 +133,7 @@ Le système repose sur un **moteur hybride dégroupé** où Python joue le rôle
 | `POST` | `/generate-ideas` | Phase 1 : renvoie `{"ideas": [{"title", "description"}]}` (3 idées) |
 | `POST` | `/generate-recipe` | Phase 2 : renvoie les 4 variantes `original`, `healthy`, `protein`, `gourmand` |
 
-Les deux routes `POST` acceptent le même corps JSON : `simple_prompt`, `ingredients`, `equipment`, `fusion`, `risk`, `time`, `dish_type` (Salé/Sucré), `diet_profile`, `cooking_style`, `chef_instruction_directive`, et `selected_idea` pour `/generate-recipe`.
+Les deux routes `POST` acceptent le même corps JSON : `simple_prompt`, `ingredients`, `equipment`, `fusion`, `risk`, `time`, `dish_type` (Salé/Sucré), `diet_profile`, `cooking_style`, `chef_instruction_directive`, et `selected_idea` pour `/generate-recipe`. `/generate-ideas` accepte en plus `avoid_titles` (liste de titres déjà proposés, 12 maximum). Le « moment du repas » (Entrée/Plat/Dessert) voyage dans `chef_instruction_directive`.
 
 **Limites :** 10 requêtes de génération par minute et par IP (`RATE_LIMIT_PER_MIN`), réponse `429` au-delà. En cas d'échec du LLM, `/generate-recipe` renvoie un code `500` avec une structure de secours que le front sait afficher.
 
