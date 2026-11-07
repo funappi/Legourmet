@@ -204,16 +204,8 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 850px; margin-bottom: 15px; gap: 10px;">
+            <div class="result-head">
                 <button id="btn-favorite-recipe" class="btn-fav-star" style="display: none;" aria-label="Mettre en favori">☆</button>
-
-                <div class="variation-tabs" id="variationTabsZone" style="display: none; margin-bottom: 0; flex: 1;">
-                    <button class="var-tab active-variant" data-variant="original">✨ Original</button>
-                    <button class="var-tab" data-variant="healthy">🌿 Healthy</button>
-                    <button class="var-tab" data-variant="protein">💪 Protéiné</button>
-                    <button class="var-tab" data-variant="gourmand">🧀 Gourmand</button>
-                </div>
-
                 <div class="topbar-actions" role="toolbar" aria-label="Mes outils">
                     <button id="open-planning-btn" class="topbar-btn" aria-label="Ouvrir le planning de la semaine" title="Planifier mes repas de la semaine">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -244,6 +236,12 @@
                         </svg>
                         <span class="topbar-btn-text">Favoris</span>
                     </button>
+                </div>
+                <div class="variation-tabs" id="variationTabsZone" style="display: none;">
+                    <button class="var-tab active-variant" data-variant="original">✨ Original</button>
+                    <button class="var-tab" data-variant="healthy">🌿 Healthy</button>
+                    <button class="var-tab" data-variant="protein">💪 Protéiné</button>
+                    <button class="var-tab" data-variant="gourmand">🧀 Gourmand</button>
                 </div>
             </div>
 
@@ -295,6 +293,7 @@
 
             <div class="mrcook-layout" id="recipeCard">
                 <div class="recipe-top-header" style="text-align: center; margin-bottom: 25px;">
+                    <p id="recipeKicker" class="recipe-kicker hidden-mode"></p>
                     <h2 id="recipeTitle" class="main-recipe-title" style="margin-bottom: 20px;">Laboratoire Culinaire</h2>
 
                     <div class="plate-wrapper" id="interactivePlateWrapper" style="margin: 0 auto;">
@@ -336,6 +335,8 @@
                     <p id="exclusion-warning-text"></p>
                     <button type="button" id="btn-fix-exclusions" class="control-btn">🪄 Corriger avec l'IA</button>
                 </div>
+
+                <button type="button" id="btn-cook-mode" class="btn-cook-mode" data-html2canvas-ignore="true">👨‍🍳 Mode cuisine</button>
 
                 <div class="recipe-split-columns">
                     <div class="mrcook-left-column">
@@ -538,6 +539,31 @@
         </div>
     </div>
 
+    <div id="cook-overlay" class="cook-overlay hidden-mode" role="dialog" aria-modal="true" aria-labelledby="cook-title">
+        <div class="cook-top">
+            <div class="cook-heading">
+                <p id="cook-kicker" class="cook-kicker"></p>
+                <h2 id="cook-title" class="cook-title"></h2>
+            </div>
+            <div class="cook-top-actions">
+                <button type="button" id="cook-ing-btn" class="cook-chip" aria-expanded="false">🧺 Ingrédients</button>
+                <button type="button" id="cook-close-btn" class="cook-close" aria-label="Quitter le mode cuisine">✕</button>
+            </div>
+        </div>
+        <div class="cook-progress" aria-hidden="true"><div id="cook-progress-fill" class="cook-progress-fill"></div></div>
+        <div id="cook-ing-panel" class="cook-ing-panel hidden-mode"><ul id="cook-ing-list"></ul></div>
+        <main class="cook-stage">
+            <p id="cook-step-count" class="cook-step-count" aria-live="polite"></p>
+            <p id="cook-step-text" class="cook-step-text"></p>
+        </main>
+        <div id="cook-timers" class="cook-timers" aria-live="polite"></div>
+        <div class="cook-nav">
+            <button type="button" id="cook-prev-btn" class="cook-nav-btn">← Précédent</button>
+            <button type="button" id="cook-next-btn" class="cook-nav-btn is-primary">Suivant →</button>
+        </div>
+        <p id="cook-awake" class="cook-awake hidden-mode">☀️ L'écran reste allumé</p>
+    </div>
+
     <div id="loading-display" class="loading-overlay hidden-mode" role="dialog" aria-modal="true" aria-labelledby="loading-title">
         <div class="loading-card glass" id="loading-card" tabindex="-1">
             <div class="loading-steps" id="loading-steps" aria-hidden="true">
@@ -573,6 +599,7 @@
     <script defer src="shopping.js"></script>
     <script defer src="menu.js"></script>
     <script defer src="planning.js"></script>
+    <script defer src="cooking.js"></script>
     <script defer src="main.js"></script>
 </body>
 </html>
