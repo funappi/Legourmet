@@ -161,7 +161,10 @@ const Settings = (() => {
     };
     const allergenById = (id) => ALLERGEN_CATALOG.find(a => a.id === id);
 
+    // Les termes ne changent que si le texte change : on évite de tout re-analyser à chaque affichage de recette.
+    let _termsFor = null, _termsCache = [];
     function exclusionTerms() {
+        if (_termsFor === data.avoidText) return _termsCache;
         const terms = [];
         const seenAllergens = new Set();
         parseTerms(data.avoidText).forEach(term => {
@@ -175,6 +178,7 @@ const Settings = (() => {
                 terms.push({ label: term, kws: [term], safe: [], allergen: false });
             }
         });
+        _termsFor = data.avoidText; _termsCache = terms;
         return terms;
     }
 
@@ -316,6 +320,7 @@ const Settings = (() => {
         while (list && list.children.length > wanted) list.lastElementChild.remove();
         while (list && list.children.length < wanted) { const n = list.children.length; addBtn?.click(); if (list.children.length === n) break; }
         document.querySelectorAll(".fusion-select").forEach((sel, i) => { sel.value = p.fusion[i] || ""; });
+        if (window.LG_syncCourses) window.LG_syncCourses();
     }
 
     // Bouton cassette : l'état « pré-rempli » ne vaut que pour cette visite, rien n'est modifié en mémoire.
@@ -399,16 +404,14 @@ const Settings = (() => {
                 const b = mk("button", "pd-card", label); b.type = "button"; b.dataset.group = group; b.dataset.value = value;
                 b.addEventListener("click", () => editPanel(p => {
                     if (group === "equip") { p.equip = p.equip.includes(value) ? p.equip.filter(x => x !== value) : [...p.equip, value]; return; }
-                    const key = group === "course" ? "course" : group;   // course = tableau (une seule valeur), les autres = texte
-                    if (group === "course") {
-                        const was = p.course.includes(value);
-                        p.course = was ? [] : [value];
-                        if (!was) {   // Dessert => Sucré ; Entrée/Plat => on repasse de Sucré à Salé
-                            if (value === "Dessert") p.type = "Sucré"; else if (p.type === "Sucré") p.type = "Salé";
-                        }
+                    if (group === "course") {   // 1, 2 ou 3 moments du repas ; plusieurs => type automatique
+                        p.course = p.course.includes(value) ? p.course.filter(c => c !== value) : [...p.course, value];
+                        if (p.course.length >= 2) p.type = "";
+                        else if (p.course.length === 1) p.type = p.course[0] === "Dessert" ? "Sucré" : (p.type === "Sucré" ? "Salé" : p.type);
                     } else {
-                        p[key] = p[key] === value ? "" : value;
+                        p[group] = p[group] === value ? "" : value;
                         if (group === "type" && p.type === "Salé") p.course = p.course.filter(c => c !== "Dessert");
+                        if (group === "type" && p.course.length >= 2) p.type = "";
                     }
                 }));
                 grid.appendChild(b);

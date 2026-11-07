@@ -187,3 +187,11 @@ Ce projet est distribué sous la licence [PolyForm Noncommercial 1.0.0](LICENSE)
 
 **Usage commercial : contacte-moi pour une licence séparée** — [Funappi](https://github.com/funappi).
 
+
+
+## Étape 2 : menu, planning, liste de courses
+Un seul plat est généré à la fois (ménage le quota du plan gratuit de Groq).
+- **Menu** : coche 2 ou 3 services (Entrée / Plat / Dessert). Le premier plat s'affiche, puis « Plat suivant » génère le suivant. « Autre plat » en propose un autre pour le service affiché.
+- **Planning** (bouton « Planning » en haut) : jours, midi/soir, services, personnes, variété. Le premier repas est généré ; les autres, listés à droite, se génèrent au clic. Case « je n'aime pas » + « Remplacer la sélection » : les plats cochés sont vidés et jamais reproposés.
+- **Liste de courses** : ingrédients fusionnés par rayon, « j'ai déjà », garde-manger mémorisé (`lg_pantry`), copier / partager.
+- **Backend** : route `POST /generate-meal` (un plat) dans `Gourmet/app.py` ; recoller le fichier sur PythonAnywhere puis Reload.

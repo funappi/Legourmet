@@ -1,6 +1,7 @@
 from flask import Flask, request, send_from_directory, Response
 from flask_cors import CORS
 from groq import Groq
+import functools
 import os
 import re
 import json
@@ -49,6 +50,11 @@ def json_response(data, status=200):
         mimetype='application/json; charset=utf-8'
     )
 
+# Les modèles gpt-oss de Groq réfléchissent longuement par défaut : « low » divise le temps de réponse.
+# Réglable avec la variable d'environnement GROQ_REASONING (low, medium, high ; vide = désactivé).
+_REASONING = os.getenv("GROQ_REASONING", "low").strip()
+LLM_EXTRA = {"reasoning_effort": _REASONING} if _REASONING and "gpt-oss" in os.getenv("GROQ_MODEL", "openai/gpt-oss-120b") else {}
+
 def ask_llm(prompt):
     """Gère l'appel à l'IA de manière centralisée pour éviter le code dupliqué."""
     try:
@@ -59,7 +65,8 @@ def ask_llm(prompt):
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
-            temperature=0.25
+            temperature=0.25,
+            **LLM_EXTRA
         )
         return json.loads(completion.choices[0].message.content)
     except Exception as e:
@@ -219,7 +226,7 @@ def validate_pack(pack):
             raise ValueError(f"structure invalide pour : {key}")
     return pack
 
-def sanitize_variant(value):
+def sanitize_variant(value, need_steps=True):
     """Nettoie une recette (venant du site ou de l'IA) : types, longueurs, clés attendues par le site."""
     if not isinstance(value, dict):
         raise ValueError("recette non-objet")
@@ -236,7 +243,7 @@ def sanitize_variant(value):
         ingredients.append({"name": clean(item["name"], 80), "qty": qty, "unit": clean(item.get("unit", ""), 20)})
     raw_steps = value.get("steps")
     steps = [clean(x, 500) for x in (raw_steps if isinstance(raw_steps, list) else [])[:30] if isinstance(x, str) and x.strip()]
-    if not ingredients or not steps:
+    if not ingredients or (need_steps and not steps):
         raise ValueError("structure invalide")
     macros = value.get("macros") if isinstance(value.get("macros"), dict) else {}
     try:
@@ -266,23 +273,25 @@ def sanitize_variant(value):
 def index():
     return send_from_directory('static', 'index.html')
 
+@functools.lru_cache(maxsize=512)
+def _search_cached(query):
+    query_smart = query.replace("oe", "œ")
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute(
+            "SELECT DISTINCT nom, categorie, calories FROM ingredients WHERE nom LIKE ? OR nom LIKE ? LIMIT 8",
+            (f"%{query}%", f"%{query_smart}%")
+        )
+        return tuple(dict(row) for row in cursor.fetchall())
+
 @app.route('/api/ingredients', methods=['GET'])
 def search_ingredients():
     query = request.args.get('q', '').strip().lower()
     if len(query) < 2:
         return json_response([])
 
-    query_smart = query.replace("oe", "œ")
-
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute(
-                "SELECT DISTINCT nom, categorie, calories FROM ingredients WHERE nom LIKE ? OR nom LIKE ? LIMIT 8",
-                (f"%{query}%", f"%{query_smart}%")
-            )
-            results = [dict(row) for row in cursor.fetchall()]
-        return json_response(results)
+        return json_response(list(_search_cached(query)))
     except Exception as e:
         print(f"Erreur DB: {e}")
         return json_response([])
@@ -489,6 +498,51 @@ def regenerate_variant():
 
     result = ask_llm_checked(prompt, data, extract=lambda r: [r], parse=sanitize_variant)
     return json_response({"recipe": result}) if result else json_response({"error": "Régénération impossible pour le moment."}, 500)
+
+@app.route('/generate-meal', methods=['POST'])
+def generate_meal():
+    """UN seul plat (version Original) pour un repas du planning ou un service d'un menu.
+    Une seule génération à la fois : ménage le quota du plan gratuit de Groq. Les autres versions se demandent à la carte."""
+    data = request.get_json(silent=True) or {}
+    course = data.get("course") if data.get("course") in ("Entrée", "Plat", "Dessert") else "Plat"
+    slot = clean(data.get("slot", ""), 40)
+    avoid = _clean_list(data.get("avoid_titles"), 60, 90)
+    menu_titles = _clean_list(data.get("menu_titles"), 4, 90)
+    equipment = data.get("equipment", [])
+    equip_clause = f"Matériel EXCLUSIF : {', '.join(clean(e, 40) for e in equipment[:10])}." if isinstance(equipment, list) and equipment and "Auto_FoodPairing" not in equipment else "Matériel : Libre."
+    briefs = {
+        "Entrée": "une entrée légère et raffinée qui ouvre le repas (jamais un plat principal)",
+        "Plat": "un plat principal complet et rassasiant",
+        "Dessert": "un dessert (domaine sucré uniquement)",
+    }
+    diet = clean(data.get("diet_profile", "Aucun"), 40)
+    time_level = clean(data.get("time", "Amateur"), 30)
+    vary = bool(data.get("vary", True))
+    inspiration = clean(data.get("inspiration", ""), 200)
+    directive = clean(data.get("chef_instruction_directive", ""), 900)
+    context = (
+        f"Tu composes un menu : les autres services sont déjà choisis ({', '.join(menu_titles)}). Ce plat doit s'accorder avec eux sans répéter leur ingrédient principal."
+        if menu_titles else f"Tu prépares le planning de la semaine d'une famille. Repas concerné : {slot or 'un repas'}."
+    )
+    prompt = f"""Tu es un chef de bistronomie. {context} Propose {briefs[course]}.
+    RÈGLES :
+    - Complexité : {time_level}. {equip_clause}
+    - Type : {"SUCRÉ" if course == "Dessert" else "SALÉ"}.
+    {f'- RÉGIME STRICT : {diet}.' if diet != "Aucun" else ''}
+    {'- VARIÉTÉ : change de cuisine, de protéine principale et de technique par rapport aux plats déjà prévus.' if vary and not menu_titles else ''}
+    {f"- DEMANDE DE L'UTILISATEUR : {inspiration}." if inspiration else ''}
+    {f"- À NE PAS REDONNER NI IMITER (déjà prévus ou refusés) : {', '.join(avoid)}." if avoid else ''}
+    {f'- DIRECTIVE DU CHEF : {directive}' if directive else ''}
+    - INTERDICTION D'INVENTER DES MOTS : vocabulaire culinaire français strict et existant.
+    - Rédige en français, 6 à 9 étapes, quantités pour 1 PERSONNE. N'utilise JAMAIS l'abréviation "u" (écris "pièce"). Unités admises : "g", "mg", "ml", "cl", "c.à.s", "c.à.c", "pincée", "pièce".
+    {chr(10).join("    " + l for l in exclusions_lines(data)).strip()}
+    {profile_reminder(data)}
+
+    Renvoie UNIQUEMENT un objet JSON brut de cette forme, sans texte autour :
+    {VARIANT_JSON_SHAPE}"""
+
+    result = ask_llm_checked(prompt, data, extract=lambda r: [r], parse=sanitize_variant)
+    return json_response({"recipe": result, "course": course}) if result else json_response({"error": "Génération impossible pour le moment."}, 500)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

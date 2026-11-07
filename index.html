@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Le Gourmet - Laboratoire d'Alchimie Culinaire Premium</title>
     <script>try { var savedTheme = localStorage.getItem("lg_theme"); if (savedTheme === "light" || savedTheme === "dark") document.documentElement.dataset.theme = savedTheme; } catch (e) {}</script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -109,7 +110,7 @@
                     <div class="group-content" id="c-diet">
 
                         <div style="margin-bottom: 20px;">
-                            <label class="slider-label" style="margin-bottom: 8px; display: block;">Moment du Repas</label>
+                            <label class="slider-label" style="margin-bottom: 8px; display: block;">Moment du Repas <span class="slider-hint">(1, 2 ou 3 au choix)</span></label>
                             <div class="course-grid">
                                 <div class="course-card" data-course="Entrée">🥗 Entrée</div>
                                 <div class="course-card" data-course="Plat">🍽️ Plat</div>
@@ -123,6 +124,7 @@
                                 <div class="type-card active" data-type="Salé">🧂 Salé</div>
                                 <div class="type-card" data-type="Sucré">🍩 Sucré</div>
                             </div>
+                            <p id="type-auto-note" class="type-auto-note hidden-mode">Menu complet : le dessert est sucré, le reste est salé (automatique).</p>
                         </div>
                         
                         <div style="margin-bottom: 20px;">
@@ -179,6 +181,29 @@
 
         <main class="result-panel">
             
+            <aside id="planSide" class="plan-side hidden-mode" aria-label="Mon planning">
+                <div class="plan-side-head">
+                    <h3>📅 Mon planning</h3>
+                    <button type="button" id="plan-side-toggle" class="plan-side-toggle" aria-expanded="true" aria-label="Replier la liste">▾</button>
+                </div>
+                <p id="plan-side-summary" class="plan-side-summary"></p>
+                <div id="plan-side-list" class="plan-side-list"></div>
+                <div class="plan-side-actions">
+                    <div class="plan-side-row">
+                        <button type="button" id="plan-shopping-btn" class="btn-shop-main">🛒 Courses</button>
+                        <button type="button" id="plan-edit-btn" class="control-btn">Réglages</button>
+                    </div>
+                </div>
+            </aside>
+            <div id="courseTabsZone" class="course-tabs-zone hidden-mode">
+                <div id="courseTabs" class="course-tabs" role="group" aria-label="Plats du menu"></div>
+                <div class="course-tabs-actions">
+                    <button type="button" id="menu-replace-btn" class="control-btn" title="Proposer un autre plat pour ce service">🔄 Autre plat</button>
+                    <button type="button" id="menu-shopping-btn" class="control-btn">🛒 Courses</button>
+                    <button type="button" id="menu-next-btn" class="btn-next hidden-mode">Plat suivant →</button>
+                </div>
+            </div>
+
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 850px; margin-bottom: 15px; gap: 10px;">
                 <button id="btn-favorite-recipe" class="btn-fav-star" style="display: none;" aria-label="Mettre en favori">☆</button>
 
@@ -190,6 +215,13 @@
                 </div>
 
                 <div class="topbar-actions" role="toolbar" aria-label="Mes outils">
+                    <button id="open-planning-btn" class="topbar-btn" aria-label="Ouvrir le planning de la semaine" title="Planifier mes repas de la semaine">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3.5" y="5" width="17" height="15.5" rx="3"></rect><line x1="3.5" y1="10" x2="20.5" y2="10"></line><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line>
+                        </svg>
+                        <span class="topbar-btn-text">Planning</span>
+                    </button>
+                    <span class="topbar-sep" aria-hidden="true"></span>
                     <button id="open-settings-btn" class="topbar-btn" aria-label="Ouvrir mes préférences" title="Préférences, allergies et ce que je n'aime pas">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="17" x2="20" y2="17"></line>
@@ -351,6 +383,9 @@
                     <button id="btn-export-notes" class="btn-export-premium">
                         📋 Copier les ingrédients pour mes Notes
                     </button>
+                    <button id="btn-shop-recipe" class="btn-export-premium btn-shop">
+                        🛒 Liste de courses de cette recette
+                    </button>
                     <button id="btn-share-screenshot" class="btn-share-premium">
                         📸 Partager la fiche recette (Screenshot)
                     </button>
@@ -445,6 +480,64 @@
         </div>
     </div>
 
+
+    <div id="shopping-modal-overlay" class="modal-overlay hidden-mode" style="z-index: 15000;">
+        <div class="ideas-modal glass shopping-modal" role="dialog" aria-modal="true" aria-labelledby="shopping-title">
+            <div class="modal-header">
+                <h3 id="shopping-title">🛒 Liste de courses</h3>
+                <button id="shopping-close-btn" class="close-modal-btn" aria-label="Fermer la liste de courses">✕</button>
+            </div>
+            <p id="shopping-subtitle" class="shop-subtitle"></p>
+            <p id="shopping-count" class="shop-count" role="status"></p>
+            <p class="shop-help">Coche <strong>« j'ai déjà »</strong> : l'article quitte la liste. 📍 = toujours chez moi.</p>
+            <div id="shopping-body" class="shop-body"></div>
+            <details id="shopping-pantry" class="shop-pantry">
+                <summary>🧺 Mon garde-manger (toujours chez moi)</summary>
+                <div id="pantry-chips" class="pantry-chips"></div>
+                <div class="pantry-add">
+                    <input type="text" id="pantry-input" placeholder="Ajouter : sel, huile, farine…" maxlength="40" aria-label="Ajouter au garde-manger">
+                    <button type="button" id="pantry-add-btn" class="control-btn">Ajouter</button>
+                </div>
+                <div id="pantry-suggestions" class="pantry-suggestions"></div>
+            </details>
+            <div class="shop-actions">
+                <button type="button" id="shopping-copy-btn" class="control-btn">📋 Copier</button>
+                <button type="button" id="shopping-share-btn" class="control-btn">📤 Partager</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="planning-page" class="planning-page hidden-mode" role="dialog" aria-modal="true" aria-labelledby="planning-title">
+        <div class="planning-inner">
+            <header class="planning-header">
+                <h2 id="planning-title">📅 Planning de la semaine</h2>
+                <button type="button" id="plan-close-btn" class="close-modal-btn" aria-label="Fermer le planning">✕</button>
+            </header>
+
+            <section id="plan-setup" class="plan-setup glass">
+                <div class="plan-options">
+                    <div class="plan-opt"><span class="plan-opt-label">Jours</span>
+                        <div class="stepper"><button type="button" id="plan-days-minus" aria-label="Moins de jours">−</button><span id="plan-days-val">5</span><button type="button" id="plan-days-plus" aria-label="Plus de jours">+</button></div>
+                    </div>
+                    <div class="plan-opt"><span class="plan-opt-label">Personnes</span>
+                        <div class="stepper"><button type="button" id="plan-persons-minus" aria-label="Moins de personnes">−</button><span id="plan-persons-val">2</span><button type="button" id="plan-persons-plus" aria-label="Plus de personnes">+</button></div>
+                    </div>
+                    <label class="plan-opt plan-vary"><input type="checkbox" id="plan-vary" checked> <span>Varier automatiquement les plats</span></label>
+                </div>
+                <p class="plan-legend">Active les repas voulus, puis choisis 🥗 entrée · 🍽️ plat · 🍰 dessert pour chacun.</p>
+                <div id="plan-grid" class="plan-grid"></div>
+                <button type="button" id="plan-generate-btn" class="btn-primary">Générer le planning</button>
+                <div class="plan-resume hidden-mode" id="plan-resume">
+                    <button type="button" id="plan-resume-btn" class="control-btn">Reprendre mon planning en cours</button>
+                    <button type="button" id="plan-clear-btn" class="control-btn">Effacer le planning</button>
+                </div>
+                <p class="plan-estimate" style="color: var(--text-muted);">Un seul plat est généré à la fois : le premier s'affiche, les autres se génèrent quand tu cliques dessus dans la liste.</p>
+                <p id="plan-estimate" class="plan-estimate"></p>
+            </section>
+
+        </div>
+    </div>
+
     <div id="loading-display" class="loading-overlay hidden-mode" role="dialog" aria-modal="true" aria-labelledby="loading-title">
         <div class="loading-card glass" id="loading-card" tabindex="-1">
             <div class="loading-steps" id="loading-steps" aria-hidden="true">
@@ -454,7 +547,13 @@
             </div>
 
             <div class="spinner loading-spinner" id="loading-spinner" aria-hidden="true"></div>
+            <div class="loading-art hidden-mode" id="loading-art" aria-hidden="true"></div>
+            <p class="loading-art-caption hidden-mode" id="loading-art-caption" aria-hidden="true"></p>
             <h2 id="loading-title" class="loading-title" role="status" aria-live="polite">Alchimie Culinaire en Cours...</h2>
+            <div class="loading-progress hidden-mode" id="loading-progress">
+                <div class="loading-progress-bar"><div class="loading-progress-fill" id="loading-progress-fill"></div></div>
+                <span class="loading-progress-label" id="loading-progress-label"></span>
+            </div>
             <p id="loading-quip" class="loading-quip" aria-hidden="true"></p>
             <p id="loading-slow" class="loading-slow hidden-mode">Le serveur met un peu de temps à répondre : il se réveille peut-être. La première fois, ça peut prendre jusqu'à une minute.</p>
 
@@ -467,9 +566,13 @@
         </div>
     </div>
 
-    <script src="inventory.js"></script>
-    <script src="settings.js"></script>
-    <script src="history.js"></script>
-    <script src="main.js"></script>
+    <script defer src="inventory.js"></script>
+    <script defer src="settings.js"></script>
+    <script defer src="history.js"></script>
+    <script defer src="loader-art.js"></script>
+    <script defer src="shopping.js"></script>
+    <script defer src="menu.js"></script>
+    <script defer src="planning.js"></script>
+    <script defer src="main.js"></script>
 </body>
 </html>
