@@ -556,7 +556,10 @@
             <p id="cook-step-count" class="cook-step-count" aria-live="polite"></p>
             <p id="cook-step-text" class="cook-step-text"></p>
         </main>
-        <div id="cook-timers" class="cook-timers" aria-live="polite"></div>
+        <div class="cook-timers-wrap">
+            <div id="cook-hint" class="cook-tip cook-hint hidden-mode" role="status">Touchez un minuteur pour revenir à l'étape où vous l'avez lancé.</div>
+            <div id="cook-timers" class="cook-timers" aria-live="polite"></div>
+        </div>
         <div class="cook-nav">
             <button type="button" id="cook-prev-btn" class="cook-nav-btn">← Précédent</button>
             <button type="button" id="cook-next-btn" class="cook-nav-btn is-primary">Suivant →</button>

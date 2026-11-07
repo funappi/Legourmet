@@ -102,10 +102,23 @@ const Cooking = (() => {
         // le son doit être « débloqué » par un geste : on crée le contexte audio au clic
         try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch (e) {}
         const label = `${action} · ${durationLabel}`;
+        showHint();
         timers.push({ id: ++timerSeq, step: index, label, end: Date.now() + seconds * 1000, total: seconds, done: false });
         if (!tick) tick = setInterval(update, 500);
         update();
     }
+
+    // Petite bulle d'aide, une seule fois par ouverture du mode cuisine
+    let hintShown = false, hintTimer = null;
+    function showHint() {
+        const hint = $("cook-hint");
+        if (!hint || hintShown) return;
+        hintShown = true;
+        hint.classList.remove("hidden-mode");
+        clearTimeout(hintTimer);
+        hintTimer = setTimeout(() => hint.classList.add("hidden-mode"), 6000);
+    }
+    const hideHint = () => { clearTimeout(hintTimer); $("cook-hint")?.classList.add("hidden-mode"); };
 
     function update() {
         const now = Date.now();
@@ -133,8 +146,10 @@ const Cooking = (() => {
                 stop.addEventListener("click", (e) => { e.stopPropagation(); timers = timers.filter(x => x.id !== t.id); renderTimers(); });
                 {
                     el.classList.add("is-link"); el.tabIndex = 0; el.setAttribute("role", "button");
-                    el.title = `Revenir à l'étape ${t.step + 1}`;
-                    const jump = () => { index = t.step; renderStep(); };
+                    el.dataset.tip = `Ouvre l'étape ${t.step + 1} correspondante`;
+                    const jump = () => { hideHint(); index = t.step; renderStep(); };
+                    el.addEventListener("pointerenter", hideHint);
+                    el.addEventListener("focus", hideHint);
                     el.addEventListener("click", jump);
                     el.addEventListener("keydown", (e) => { if (e.key === "Enter") jump(); });
                 }
@@ -199,6 +214,7 @@ const Cooking = (() => {
 
     function open({ recipe: r, portions: p, kicker: k }) {
         if (!r || !Array.isArray(r.steps) || !r.steps.length) return;
+        hintShown = false; hideHint();
         recipe = r; portions = p || 1; kicker = k || ""; index = 0;
         $("cook-title").textContent = r.title || "";
         $("cook-kicker").textContent = kicker;
