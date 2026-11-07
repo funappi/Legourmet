@@ -9,9 +9,6 @@ const Cooking = (() => {
     let wakeLock = null;
     let timers = [];          // { id, label, end, total, done }
     let tick = null, audio = null, timerSeq = 0;
-    // Deux présentations des minuteurs à comparer : « step » = « Étape 3 · 1 h 30 » et un clic ramène à l'étape ;
-    // « action » = « Mijotage · 1 h 30 » (nom de l'action).
-    const timerStyle = () => { try { return localStorage.getItem('lg_timer_style') === 'action' ? 'action' : 'step'; } catch (e) { return 'step'; } };
 
     // ---------- repérage des durées dans une phrase ----------
     // Renvoie [{ start, end, seconds, label }] ; gère « 1 h 30 », « 10 à 12 minutes », « 45 secondes ».
@@ -104,7 +101,7 @@ const Cooking = (() => {
     function startTimer(seconds, durationLabel, action) {
         // le son doit être « débloqué » par un geste : on crée le contexte audio au clic
         try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch (e) {}
-        const label = timerStyle() === 'action' ? `${action} · ${durationLabel}` : `Étape ${index + 1} · ${durationLabel}`;
+        const label = `${action} · ${durationLabel}`;
         timers.push({ id: ++timerSeq, step: index, label, end: Date.now() + seconds * 1000, total: seconds, done: false });
         if (!tick) tick = setInterval(update, 500);
         update();
@@ -134,9 +131,9 @@ const Cooking = (() => {
                 const stop = document.createElement("button"); stop.type = "button"; stop.className = "cook-timer-stop";
                 stop.textContent = "✕"; stop.setAttribute("aria-label", `Arrêter le minuteur : ${t.label}`);
                 stop.addEventListener("click", (e) => { e.stopPropagation(); timers = timers.filter(x => x.id !== t.id); renderTimers(); });
-                if (timerStyle() === 'step') {
+                {
                     el.classList.add("is-link"); el.tabIndex = 0; el.setAttribute("role", "button");
-                    el.title = "Revenir à cette étape";
+                    el.title = `Revenir à l'étape ${t.step + 1}`;
                     const jump = () => { index = t.step; renderStep(); };
                     el.addEventListener("click", jump);
                     el.addEventListener("keydown", (e) => { if (e.key === "Enter") jump(); });
