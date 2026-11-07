@@ -1,4 +1,4 @@
-from flask import Flask, request, send_from_directory, Response
+from flask import Flask, request, send_from_directory, Response, g
 from flask_cors import CORS
 from groq import Groq
 import functools
@@ -15,6 +15,15 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
+
+@app.after_request
+def surface_llm_errors(resp):
+    """Clé API refusée (401) ou quota dépassé (429) : on le dit au site au lieu d'une erreur 500 générique."""
+    code = g.get("llm_error")
+    if code and resp.status_code >= 500:
+        msg = "Clé API refusée par Groq." if code == 401 else "Quota Groq atteint."
+        return json_response({"error": msg}, code)
+    return resp
 
 GROQ_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_KEY:
@@ -58,7 +67,10 @@ LLM_EXTRA = {"reasoning_effort": _REASONING} if _REASONING and "gpt-oss" in os.g
 def ask_llm(prompt):
     """Gère l'appel à l'IA de manière centralisée pour éviter le code dupliqué."""
     try:
-        completion = client.chat.completions.create(
+        # BYOK : si le navigateur envoie sa propre clé Groq (Préférences), on l'utilise pour cette requête.
+        user_key = request.headers.get("X-Groq-Key", "").strip()[:200]
+        llm = Groq(api_key=user_key) if user_key else client
+        completion = llm.chat.completions.create(
             model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
             messages=[
                 {"role": "system", "content": "Tu es un chef cuisinier expert. Tu réponds obligatoirement au format JSON valide."},
@@ -71,6 +83,11 @@ def ask_llm(prompt):
         return json.loads(completion.choices[0].message.content)
     except Exception as e:
         print(f"[ERREUR GROQ BRUTE] : {e}")
+        status = getattr(e, "status_code", None)
+        if status in (401, 403):
+            g.llm_error = 401
+        elif status == 429:
+            g.llm_error = 429
         return None
 
 def clean(value, max_len=300):
@@ -226,6 +243,54 @@ def validate_pack(pack):
             raise ValueError(f"structure invalide pour : {key}")
     return pack
 
+# ==========================================
+# 🔥 KCAL CALCULÉES (table `ingredients` de la base, calories pour 100 g)
+# ==========================================
+_GRAMS_PER_UNIT = {"g": 1, "mg": 0.001, "kg": 1000, "ml": 1, "cl": 10, "dl": 100, "l": 1000,
+                   "c.a.s": 15, "cas": 15, "c.a.c": 5, "cac": 5}
+_ZERO_KCAL = {"sel", "poivre", "eau", "glacons", "glace", "bicarbonate", "vinaigre blanc"}
+
+@functools.lru_cache(maxsize=1)
+def _kcal_table():
+    """[(nom normalisé, kcal/100 g)], le plus long nom d'abord (« huile d olive » avant « huile »)."""
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            rows = conn.execute("SELECT nom, calories FROM ingredients").fetchall()
+    except Exception as e:
+        print(f"[KCAL] base illisible : {e}")
+        return ()
+    table = {}
+    for nom, cal in rows:
+        key = _norm(nom)
+        if key and key not in table:
+            table[key] = cal
+    return tuple(sorted(table.items(), key=lambda kv: -len(kv[0])))
+
+def estimate_kcal(ingredients):
+    """Calories PAR PERSONNE d'après la base. Renvoie None si rien n'est reconnu.
+    `matched` / `counted` : combien d'ingrédients (hors sel, eau, poivre) ont pu être chiffrés."""
+    table = _kcal_table()
+    if not table:
+        return None
+    total, matched, counted = 0.0, 0, 0
+    for item in ingredients:
+        name = _norm(item.get("name"))
+        if not name or name in _ZERO_KCAL:
+            continue
+        counted += 1
+        unit = _norm(item.get("unit")).replace(" ", "")
+        per_unit = _GRAMS_PER_UNIT.get(unit)
+        if per_unit is None or not item.get("qty"):
+            continue
+        for key, cal in table:
+            if _has_term(name, key):
+                total += float(item["qty"]) * per_unit * cal / 100
+                matched += 1
+                break
+    if not matched:
+        return None
+    return {"per_portion": int(round(total / 5.0) * 5), "matched": matched, "counted": counted}
+
 def sanitize_variant(value, need_steps=True):
     """Nettoie une recette (venant du site ou de l'IA) : types, longueurs, clés attendues par le site."""
     if not isinstance(value, dict):
@@ -264,6 +329,12 @@ def sanitize_variant(value, need_steps=True):
         out["kcal_100g"] = round(float(value["kcal_100g"]))
     except (KeyError, TypeError, ValueError):
         pass
+    try:
+        est = estimate_kcal(ingredients)
+        if est:
+            out["kcal_est"] = est
+    except Exception as e:
+        print(f"[KCAL] estimation impossible : {e}")
     return out
 
 # ==========================================
@@ -543,6 +614,54 @@ def generate_meal():
 
     result = ask_llm_checked(prompt, data, extract=lambda r: [r], parse=sanitize_variant)
     return json_response({"recipe": result, "course": course}) if result else json_response({"error": "Génération impossible pour le moment."}, 500)
+
+@app.route('/suggest-substitute', methods=['POST'])
+def suggest_substitute():
+    """Remplace UN ingrédient d'une recette : une suggestion adaptée aux goûts, aversions et allergies de l'utilisateur."""
+    data = request.get_json(silent=True) or {}
+    ing = data.get("ingredient") if isinstance(data.get("ingredient"), dict) else {}
+    name = clean(ing.get("name", ""), 80)
+    if not name:
+        return json_response({"error": "Ingrédient manquant."}, 400)
+    try:
+        qty = float(ing.get("qty", 0))
+    except (TypeError, ValueError):
+        qty = 0
+    unit = clean(ing.get("unit", ""), 20)
+    title = clean(data.get("recipe_title", ""), 120)
+    others = _clean_list(data.get("other_ingredients"), 25, 60)
+    tried = _clean_list(data.get("already_suggested"), 8, 60)
+    diet = clean(data.get("diet_profile", "Aucun"), 40)
+    prompt = f"""Tu es un chef. Dans la recette « {title or 'sans titre'} », l'utilisateur veut REMPLACER cet ingrédient : {qty:g} {unit} {name} (quantité pour 1 personne).
+    Propose UN seul substitut réaliste, qui garde l'esprit du plat (texture, saveur, rôle dans la cuisson).
+    Autres ingrédients de la recette (le substitut doit s'y accorder, sans doublon inutile) : {', '.join(others) or 'non précisés'}.
+    {f'- RÉGIME STRICT : {diet}.' if diet != "Aucun" else ''}
+    {f"- DÉJÀ PROPOSÉS, DONNE-EN UN AUTRE : {', '.join(tried)}." if tried else ''}
+    - Donne la quantité équivalente pour 1 PERSONNE. Unités admises : "g", "mg", "ml", "cl", "c.à.s", "c.à.c", "pincée", "pièce".
+    - "note" : une phrase courte (140 caractères max) qui dit pourquoi ce choix convient et, si besoin, l'ajustement de cuisson.
+    {chr(10).join("    " + l for l in exclusions_lines(data)).strip()}
+    {profile_reminder(data)}
+
+    Renvoie UNIQUEMENT un objet JSON brut : {{"name": "Nom du substitut", "qty": 100, "unit": "g", "note": "..."}}"""
+
+    def parse(raw):
+        if not isinstance(raw, dict) or not clean(raw.get("name", ""), 80):
+            raise ValueError("substitut manquant")
+        try:
+            q = float(raw.get("qty", 0))
+        except (TypeError, ValueError):
+            q = 0
+        if q <= 0:
+            raise ValueError("quantité invalide")
+        return {
+            "name": clean(raw["name"], 80),
+            "qty": int(q) if q == int(q) else round(q, 1),
+            "unit": clean(raw.get("unit", ""), 20),
+            "note": clean(raw.get("note", ""), 160),
+        }
+
+    result = ask_llm_checked(prompt, data, extract=lambda r: [{"ingredients": [{"name": r["name"]}], "steps": [r["note"]]}], parse=parse)
+    return json_response({"substitute": result}) if result else json_response({"error": "Suggestion impossible pour le moment."}, 500)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

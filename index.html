@@ -8,9 +8,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0f1115">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Le Gourmet">
+    <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+    <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="offline-bar" class="offline-bar" role="status" hidden>📴 Hors ligne : tes favoris, ton historique, ton planning et tes courses restent disponibles. Les nouvelles recettes reviennent avec la connexion.</div>
     <div class="app-container" id="mainAppContainer">
         
         <button id="burger-toggle" class="burger-btn" aria-label="Ouvrir le menu">☰</button>
@@ -329,6 +338,7 @@
                     <div class="badge macro-pro">Prot: <span id="r-pro">--g</span></div>
                     <div class="badge macro-lip">Lip: <span id="r-lip">--g</span></div>
                     <div class="badge macro-glu">Gluc: <span id="r-glu">--g</span></div>
+                    <div class="badge macro-kcal" id="r-kcal" hidden></div>
                 </div>
 
                 <div class="exclusion-warning hidden-mode" id="exclusion-warning" role="alert">
@@ -449,6 +459,24 @@
                 <p class="settings-help">L'IA doit les éviter, le serveur vérifie sa réponse (nouvelle tentative automatique si besoin), puis la recette est contrôlée dans ton navigateur. Cela réduit le risque mais ne le supprime pas : en cas d'allergie, vérifie toujours la recette et les étiquettes.</p>
             </section>
 
+            <section class="settings-section">
+                <h4><label for="pref-api-key">🔑 Ma clé API Groq</label></h4>
+                <p class="settings-help">Les recettes sont générées avec ta propre clé, gratuite. Elle reste uniquement sur cet appareil et n'est jamais enregistrée sur le serveur. Laisse vide pour utiliser la clé du site, si elle est disponible.</p>
+                <div class="api-key-row">
+                    <input type="password" id="pref-api-key" class="pref-input" placeholder="gsk_..." autocomplete="off" spellcheck="false" maxlength="200">
+                    <button type="button" id="api-key-toggle" class="control-btn" aria-label="Afficher la clé">👁</button>
+                    <button type="button" id="api-key-clear" class="control-btn">Effacer</button>
+                </div>
+                <p class="settings-help"><a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">Obtenir une clé gratuite sur Groq ↗</a> (compte gratuit, 1 minute)</p>
+            </section>
+
+            <section class="settings-section">
+                <h4>📏 Unités</h4>
+                <p class="settings-help">Change l'affichage des quantités et des températures dans les recettes et le mode cuisine. Les courses restent en grammes.</p>
+                <div class="pref-block"><span class="pref-label">Quantités</span><div id="pref-unit-system" class="chip-grid"></div></div>
+                <div class="pref-block"><span class="pref-label">Températures du four</span><div id="pref-unit-temp" class="chip-grid"></div></div>
+            </section>
+
             <section class="settings-section" id="panel-editor-wrap">
                 <h4>🎛️ Panneau de contrôle par défaut</h4>
                 <p class="settings-help">Voici le panneau de l'accueil. Ce que tu sélectionnes ici sera déjà sélectionné à chaque visite. Sur l'accueil tu pourras toujours le modifier, mais ça ne changera que la recette en cours : seuls ces réglages-ci sont gardés en mémoire. Les ingrédients se saisissent à chaque recette.</p>
@@ -477,6 +505,7 @@
                 <div class="pref-block"><span class="pref-label">Cuisines que j'aime</span><div id="pref-cuisines" class="chip-grid"></div></div>
             </details>
 
+            <button type="button" id="install-app-btn" class="control-btn" hidden>📲 Installer l'application</button>
             <button type="button" id="reset-settings-btn" class="retry-btn">Tout réinitialiser</button>
         </div>
     </div>
@@ -596,6 +625,7 @@
     </div>
 
     <script defer src="inventory.js"></script>
+    <script defer src="units.js"></script>
     <script defer src="settings.js"></script>
     <script defer src="history.js"></script>
     <script defer src="loader-art.js"></script>
@@ -603,6 +633,7 @@
     <script defer src="menu.js"></script>
     <script defer src="planning.js"></script>
     <script defer src="cooking.js"></script>
+    <script defer src="pwa.js"></script>
     <script defer src="main.js"></script>
 </body>
 </html>

@@ -275,7 +275,9 @@ const PlateImage = (() => {
 document.addEventListener("DOMContentLoaded", () => {
 
     Loader.init();
-    Settings.init();   // allergies, exclusions, préférences (localStorage)
+    Settings.init();
+    Settings.initApiKey();
+    const llmHeaders = () => { const k = Settings.apiKey(); return k ? { 'Content-Type': 'application/json', 'X-Groq-Key': k } : { 'Content-Type': 'application/json' }; };   // allergies, exclusions, préférences (localStorage)
 
     // Nombre de personnes par défaut (paramètre), appliqué à chaque nouvelle recette ouverte
     function resetPortions() {
@@ -555,7 +557,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Message lisible selon la cause de l'échec
     function describeError(error) {
+        if (!navigator.onLine) return "Tu es hors ligne : le chef IA a besoin d'internet pour créer une recette. Tes favoris, ton historique, ton planning et ton mode cuisine restent disponibles.";
         if (error?.name === "AbortError") return "Le serveur met trop de temps à répondre (il se réveille peut-être). Réessaie dans un instant.";
+        if (error?.status === 401) return Settings.apiKey() ? "Groq a refusé ta clé API. Vérifie-la dans Préférences > Ma clé API Groq." : "Le serveur n'a pas de clé API active. Ajoute ta clé gratuite dans Préférences > Ma clé API Groq.";
         if (error?.status === 429) return "Trop de demandes d'un coup. Laisse le chef souffler une minute, puis réessaie.";
         if (error?.status >= 500) return "Le chef IA a eu un contretemps en cuisine (erreur du serveur). Ça passe souvent au deuxième essai.";
         if (error?.status) return `Le serveur a répondu une erreur inattendue (code ${error.status}). Réessaie dans un instant.`;
@@ -572,7 +576,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const response = await fetch(`${BACKEND_URL}/${endpoint}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: llmHeaders(),
                 body: JSON.stringify(payload),
                 signal: controller.signal
             });
@@ -1137,6 +1141,88 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    window.addEventListener("lg:units-changed", () => { if (AppState.activeRecipePack) window.renderSelectedVariant(AppState.currentSelectedVariant); });
+
+    // --- Suggestion IA : remplacer un ingrédient (1 appel, selon goûts / aversions / allergies des Préférences) ---
+    const fmtIngredient = (qty, unit) => {
+        const scaled = parseFloat(qty) * AppState.currentPortions;
+        return Units.quantity(scaled, unit) || `${scaled.toFixed(1).replace('.0', '')} ${unit}`.trim();
+    };
+    const SUGGEST_TIMEOUT_MS = 45000;
+    const triedSubstitutes = new Map(); // index -> noms déjà proposés pour cette recette
+
+    async function suggestSubstitute(index, li) {
+        const key = AppState.currentSelectedVariant;
+        const recipe = AppState.activeRecipePack?.[key];
+        const ing = recipe?.ingredients?.[index];
+        if (!ing) return;
+        let panel = li.querySelector(".ing-suggest-panel");
+        if (!panel) { panel = document.createElement("div"); panel.className = "ing-suggest-panel"; li.appendChild(panel); }
+        const say = (html) => { panel.innerHTML = html; };
+        if (!navigator.onLine) { say(`<p class="ing-suggest-msg">Tu es hors ligne : la suggestion IA a besoin d'internet.</p>`); return; }
+        if (requestInFlight) { say(`<p class="ing-suggest-msg">Une génération est déjà en cours, réessaie dans un instant.</p>`); return; }
+        requestInFlight = true;
+        say(`<p class="ing-suggest-msg"><span class="ing-spinner" aria-hidden="true"></span> Le chef cherche un remplaçant…</p>`);
+        const tried = triedSubstitutes.get(index) || [];
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), SUGGEST_TIMEOUT_MS);
+        try {
+            let diet = "Aucun";
+            try { diet = buildPayload().diet_profile || "Aucun"; } catch (e) {}
+            const res = await fetch(`${BACKEND_URL}/suggest-substitute`, {
+                method: "POST", headers: llmHeaders(), signal: controller.signal,
+                body: JSON.stringify({
+                    ingredient: { name: ing.name, qty: ing.qty, unit: ing.unit },
+                    recipe_title: recipe.title,
+                    other_ingredients: recipe.ingredients.filter((_, i) => i !== index).map(x => x.name),
+                    already_suggested: tried,
+                    diet_profile: diet,
+                    exclusions: Settings.exclusionsPayload()
+                })
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const sub = (await res.json())?.substitute;
+            if (!sub?.name || !(parseFloat(sub.qty) > 0)) throw new Error("Réponse inexploitable");
+            triedSubstitutes.set(index, [...tried, sub.name]);
+            const oldName = normalizeText(ing.name);
+            const stepsMention = oldName.length > 2 && (recipe.steps || []).some(st => normalizeText(st).includes(oldName));
+            say(`<p class="ing-suggest-line"><strong>${escapeHtml(fmtIngredient(sub.qty, sub.unit))} ${escapeHtml(sub.name)}</strong></p>`
+                + (sub.note ? `<p class="ing-suggest-note">${escapeHtml(sub.note)}</p>` : "")
+                + (stepsMention ? `<p class="ing-suggest-note">Les étapes citent encore « ${escapeHtml(ing.name)} » : pense à adapter.</p>` : "")
+                + `<div class="ing-suggest-actions"><button type="button" class="control-btn" data-act="apply">Remplacer</button><button type="button" class="control-btn" data-act="again">Autre idée</button><button type="button" class="control-btn" data-act="close">Fermer</button></div>`);
+            panel._sub = sub;
+        } catch (e) {
+            console.error(e);
+            say(`<p class="ing-suggest-msg">${e.name === "AbortError" ? "Le serveur met trop de temps à répondre. Réessaie dans un instant." : "Pas de suggestion pour le moment. Réessaie dans un instant."}</p><div class="ing-suggest-actions"><button type="button" class="control-btn" data-act="again">Réessayer</button><button type="button" class="control-btn" data-act="close">Fermer</button></div>`);
+        } finally {
+            clearTimeout(timer);
+            requestInFlight = false;
+        }
+    }
+
+    DOM.get("ingredientsList")?.addEventListener("click", (e) => {
+        const li = e.target.closest("li[data-index]");
+        if (!li) return;
+        const index = parseInt(li.dataset.index, 10);
+        if (e.target.closest(".ing-suggest")) { e.stopPropagation(); suggestSubstitute(index, li); return; }
+        const actBtn = e.target.closest("[data-act]");
+        if (actBtn || e.target.closest(".ing-suggest-panel")) {
+            e.stopPropagation();
+            const panel = li.querySelector(".ing-suggest-panel");
+            const act = actBtn?.dataset.act;
+            if (act === "close") panel.remove();
+            else if (act === "again") suggestSubstitute(index, li);
+            else if (act === "apply" && panel?._sub) {
+                const key = AppState.currentSelectedVariant;
+                const recipe = AppState.activeRecipePack[key];
+                const sub = panel._sub;
+                const next = { ...recipe, ingredients: recipe.ingredients.map((x, i) => i === index ? { name: sub.name, qty: parseFloat(sub.qty), unit: sub.unit || "" } : x) };
+                triedSubstitutes.delete(index);
+                applyVariantChange(key, next);
+            }
+        }
+    }, true);
+
     // --- 11. MOTEUR DE RENDU INTERACTIF ---
     window.renderSelectedVariant = function(variantKey) {
         const data = AppState.activeRecipePack[variantKey]; 
@@ -1176,15 +1262,32 @@ document.addEventListener("DOMContentLoaded", () => {
             DOM.get("r-glu").innerText = calcMacro(data.macros.glucides); 
         }
 
+        // Calories : calculées par le serveur d'après la base d'ingrédients (pas inventées par l'IA)
+        const kcalEl = DOM.get("r-kcal");
+        if (kcalEl) {
+            const est = data.kcal_est;
+            const ok = est && est.per_portion > 0;
+            kcalEl.hidden = !ok;
+            if (ok) {
+                kcalEl.textContent = `≈ ${est.per_portion} kcal/pers. · estimé`;
+                kcalEl.title = `Calculé d'après ${est.matched} ingrédient${est.matched > 1 ? "s" : ""} sur ${est.counted} reconnus dans la base (sel, eau et poivre exclus). Les ingrédients inconnus ne sont pas comptés : la valeur réelle peut être plus haute.`;
+                kcalEl.classList.toggle("is-partial", est.matched < est.counted);
+            }
+        }
+
         const ingList = DOM.get("ingredientsList");
         if (ingList && Array.isArray(data.ingredients)) {
-            ingList.innerHTML = data.ingredients.map(ing => `<li><div class="custom-checkbox"></div> <label><strong>${(parseFloat(ing.qty) * AppState.currentPortions).toFixed(1).replace('.0', '')} ${escapeHtml(ing.unit)}</strong> ${escapeHtml(ing.name)}</label></li>`).join('');
+            ingList.innerHTML = data.ingredients.map((ing, i) => {
+                const scaled = parseFloat(ing.qty) * AppState.currentPortions;
+                const shown = Units.quantity(scaled, ing.unit) || `${scaled.toFixed(1).replace('.0', '')} ${ing.unit}`;
+                return `<li data-index="${i}"><div class="custom-checkbox"></div> <label><strong>${escapeHtml(shown)}</strong> ${escapeHtml(ing.name)}</label><button type="button" class="ing-suggest" title="Suggestion IA : remplacer cet ingrédient" aria-label="Suggestion IA pour remplacer ${escapeHtml(ing.name)}">💡</button></li>`;
+            }).join('');
             ingList.querySelectorAll('li').forEach(li => li.addEventListener('click', () => li.classList.toggle('checked-item')));
         }
 
         const stepsList = DOM.get("stepsList");
         if (stepsList && Array.isArray(data.steps)) {
-            stepsList.innerHTML = data.steps.map((step, idx) => `<p><strong>Étape ${idx + 1} :</strong> ${escapeHtml(step)}</p>`).join(''); 
+            stepsList.innerHTML = data.steps.map((step, idx) => `<p><strong>Étape ${idx + 1} :</strong> ${escapeHtml(Units.text(step))}</p>`).join(''); 
             stepsList.querySelectorAll('p').forEach(p => p.addEventListener('click', () => p.classList.toggle('checked-step'))); 
         }
 

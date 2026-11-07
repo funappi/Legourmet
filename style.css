@@ -748,3 +748,36 @@ body.no-scroll { overflow: hidden; }
 .cook-timer { position: relative; }
 .cook-timer[data-tip]::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); width: max-content; max-width: 240px; padding: 6px 10px; border-radius: 8px; background: #3c4043; color: #f1f3f4; font-size: 0.75rem; font-weight: 500; line-height: 1.3; text-align: center; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); opacity: 0; visibility: hidden; transition: opacity 0.15s ease; pointer-events: none; z-index: 6; }
 .cook-timer[data-tip]:hover::after, .cook-timer[data-tip]:focus-visible::after { opacity: 1; visibility: visible; transition-delay: 0.35s; }
+
+/* ===== PWA : bandeau hors ligne ===== */
+.offline-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 20000; padding: 8px 14px; text-align: center; font-size: 0.85rem; line-height: 1.35; background: #f59e0b; color: #1c1917; font-weight: 500; }
+.offline-bar[hidden] { display: none; }
+body.is-offline .app-container { padding-top: 44px; }
+#install-app-btn { width: 100%; margin: 8px 0; }
+
+/* ===== Suggestion IA par ingrédient ===== */
+.ingredients-checklist li { flex-wrap: wrap; }
+.ingredients-checklist li > label { flex: 1; min-width: 0; cursor: pointer; }
+.ing-suggest { flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border-glass); background: var(--element-bg); font-size: 0.85rem; line-height: 1; cursor: pointer; opacity: 0.55; transition: opacity .2s, border-color .2s, transform .2s; }
+.ing-suggest:hover, .ing-suggest:focus-visible { opacity: 1; border-color: var(--accent); transform: scale(1.08); }
+.checked-item .ing-suggest { visibility: hidden; }
+.ing-suggest-panel { flex-basis: 100%; margin: 2px 0 4px 28px; padding: 10px 12px; border: 1px dashed var(--border-glass); border-radius: 10px; background: var(--element-bg); cursor: default; text-decoration: none; opacity: 1; }
+.ing-suggest-line { font-size: 0.92rem; margin: 0 0 4px; color: var(--text-light); }
+.ing-suggest-note, .ing-suggest-msg { font-size: 0.82rem; color: var(--text-muted); margin: 0 0 6px; line-height: 1.4; }
+.ing-suggest-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.ing-suggest-actions .control-btn { padding: 5px 10px; font-size: 0.8rem; width: auto; }
+.ing-spinner { display: inline-block; width: 11px; height: 11px; border: 2px solid var(--border-glass); border-top-color: var(--accent); border-radius: 50%; animation: ing-spin .8s linear infinite; vertical-align: -1px; }
+@keyframes ing-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ing-spinner { animation: none; } }
+
+/* ===== kcal estimées ===== */
+.macro-kcal { border-color: #10b981; color: #10b981; cursor: help; }
+.macro-kcal.is-partial { border-style: dashed; }
+.macro-kcal[hidden] { display: none; }
+
+/* ===== Clé API ===== */
+.api-key-row { display: flex; gap: 8px; align-items: center; }
+.pref-input { flex: 1; min-width: 0; padding: 11px 14px; background: var(--input-bg); border: 1px solid var(--border-glass); border-radius: 12px; color: var(--text-light); font-size: 0.95rem; font-family: ui-monospace, monospace; }
+.pref-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.api-key-row .control-btn { width: auto; flex-shrink: 0; }
+.settings-help a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
