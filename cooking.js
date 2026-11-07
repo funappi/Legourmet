@@ -102,10 +102,21 @@ const Cooking = (() => {
         // le son doit être « débloqué » par un geste : on crée le contexte audio au clic
         try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch (e) {}
         const label = `${action} · ${durationLabel}`;
-        showHint();
+        if (isTouch() && Date.now() - stepSince >= IDLE_MS) showHint();
         timers.push({ id: ++timerSeq, step: index, label, end: Date.now() + seconds * 1000, total: seconds, done: false });
         if (!tick) tick = setInterval(update, 500);
         update();
+    }
+
+    // Bulle d'aide : sur ordinateur on se contente de l'info-bulle au survol ; sur écran tactile (pas de survol),
+    // on l'affiche une fois si la personne reste plus de 10 secondes sur une étape avec un minuteur en cours.
+    const IDLE_MS = 10000;
+    const isTouch = () => !!window.matchMedia?.("(hover: none)").matches;
+    let idleTimer = null, stepSince = Date.now();
+    function armIdleHint() {
+        clearTimeout(idleTimer);
+        stepSince = Date.now();
+        idleTimer = setTimeout(() => { if (isTouch() && timers.length && isOpen()) showHint(); }, IDLE_MS);
     }
 
     // Petite bulle d'aide, une seule fois par ouverture du mode cuisine
@@ -184,6 +195,7 @@ const Cooking = (() => {
             last = d.end;
         });
         target.appendChild(document.createTextNode(text.slice(last)));
+        armIdleHint();
         $("cook-prev-btn").disabled = index === 0;
         const isLast = index === steps.length - 1;
         $("cook-next-btn").textContent = isLast ? "Terminé ✓" : "Suivant →";
@@ -229,6 +241,7 @@ const Cooking = (() => {
     }
 
     function close() {
+        clearTimeout(idleTimer); hideHint();
         $("cook-overlay").classList.add("hidden-mode");
         document.body.classList.remove("no-scroll");
         unlockScreen();
