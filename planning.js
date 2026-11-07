@@ -104,7 +104,6 @@ const Planning = (() => {
 
     // ---------- liste à droite (panneau « Mon planning ») ----------
     let currentKey = null;
-    const checked = new Set();   // clés cochées « je n'aime pas »
 
     const titleOf = (m) => m.pack?.original?.title || "";
 
@@ -116,7 +115,7 @@ const Planning = (() => {
         document.body.classList.toggle("has-plan-side", has && sideVisible);
         if (!has || !sideVisible) return;
         const done = plan.meals.filter(m => m.pack).length;
-        $("plan-side-summary").textContent = `${done} plat${done > 1 ? "s" : ""} prêt${done > 1 ? "s" : ""} sur ${plan.meals.length} · ${plan.config.persons} pers. Clique un repas pour le générer.`;
+        $("plan-side-summary").textContent = `${done} plat${done > 1 ? "s" : ""} prêt${done > 1 ? "s" : ""} sur ${plan.meals.length} · ${plan.config.persons} pers. Clique un repas pour le générer, 🔄 pour en changer.`;
 
         const list = $("plan-side-list");
         list.innerHTML = "";
@@ -127,12 +126,6 @@ const Planning = (() => {
             plan.meals.filter(m => m.day === d).sort((a, b) => SLOTS.findIndex(s => s.id === a.slot) - SLOTS.findIndex(s => s.id === b.slot) || COURSES.indexOf(a.course) - COURSES.indexOf(b.course)).forEach(m => {
                 const row = document.createElement("div");
                 row.className = "plan-side-meal" + (m.key === currentKey ? " is-current" : "") + (m.pack ? "" : " is-todo");
-                const box = document.createElement("input");
-                box.type = "checkbox"; box.className = "plan-dislike";
-                box.disabled = !m.pack; box.checked = checked.has(m.key);
-                box.title = "Je n'aime pas ce plat : à remplacer";
-                box.setAttribute("aria-label", `Je n'aime pas : ${titleOf(m) || m.course}`);
-                box.addEventListener("change", () => { if (box.checked) checked.add(m.key); else checked.delete(m.key); updateReplaceBtn(); });
                 const btn = document.createElement("button");
                 btn.type = "button"; btn.className = "plan-side-open";
                 const meta = document.createElement("span"); meta.className = "plan-side-meta";
@@ -141,21 +134,19 @@ const Planning = (() => {
                 t.textContent = titleOf(m) || "À générer";
                 btn.append(meta, t);
                 btn.addEventListener("click", () => openMeal(m));
-                row.append(box, btn);
+                const redo = document.createElement("button");
+                redo.type = "button"; redo.className = "plan-reroll";
+                redo.textContent = "🔄";
+                redo.disabled = !m.pack;
+                redo.title = m.pack ? "Je n'aime pas : proposer un autre plat" : "Pas encore généré";
+                redo.setAttribute("aria-label", m.pack ? `Remplacer : ${titleOf(m)}` : `${m.course} pas encore généré`);
+                redo.addEventListener("click", () => rerollMeal(m));
+                row.append(btn, redo);
                 group.appendChild(row);
             });
             list.appendChild(group);
         });
-        updateReplaceBtn();
         $("plan-shopping-btn").disabled = done === 0;
-    }
-
-    function updateReplaceBtn() {
-        const n = checked.size;
-        const btn = $("plan-replace-btn");
-        if (!btn) return;
-        btn.disabled = n === 0;
-        btn.textContent = n ? `Remplacer la sélection (${n})` : "Coche les plats à remplacer";
     }
 
     let sideVisible = false;
@@ -198,23 +189,24 @@ const Planning = (() => {
         const wanted = wantedMeals();
         const previous = new Map(plan.meals.map(m => [mealKey(m.day, m.slot, m.course), m]));
         plan.meals = wanted.map(w => ({ key: mealKey(w.day, w.slot, w.course), ...(previous.get(mealKey(w.day, w.slot, w.course)) || { ...w, pack: null }) }));
-        checked.clear();
         save();
         close();
         const first = plan.meals.find(m => !m.pack) || plan.meals[0];
         openMeal(first);
     }
 
-    // Les plats cochés sont vidés (leurs titres ne seront plus reproposés) ; le premier est régénéré tout de suite
-    function replaceChecked() {
-        const targets = plan.meals.filter(m => checked.has(m.key));
-        if (!targets.length) return;
-        targets.forEach(m => { if (m.pack) plan.rejected.push(titleOf(m)); m.pack = null; m.context = null; });
-        plan.rejected = [...new Set(plan.rejected)].slice(-40);
-        checked.clear();
+    // « Je n'aime pas » : le plat est remplacé tout de suite (1 appel) et son titre n'est plus reproposé
+    async function rerollMeal(meal) {
+        if (LG.busy() || !meal.pack) return;
+        const oldPack = meal.pack, oldContext = meal.context, oldTitle = titleOf(meal);
+        plan.rejected = [...new Set([...(plan.rejected || []), oldTitle])].slice(-40);
+        meal.pack = null; meal.context = null;
+        LG.setBusy(true);
+        let ok = false;
+        try { ok = await generateMeal(meal); } finally { LG.setBusy(false); }
+        if (!ok) { meal.pack = oldPack; meal.context = oldContext; plan.rejected = plan.rejected.filter(t => t !== oldTitle); renderSide(); return; }
         save();
-        renderSide();
-        openMeal(targets[0]);
+        openMeal(meal);
     }
 
     function shoppingRecipes() {
@@ -264,10 +256,9 @@ const Planning = (() => {
         $("plan-edit-btn")?.addEventListener("click", open);
         $("plan-clear-btn")?.addEventListener("click", () => {
             if (!confirm("Effacer ce planning et recommencer ?")) return;
-            plan.meals = []; plan.rejected = []; checked.clear(); currentKey = null; save(); showSide(false);
+            plan.meals = []; plan.rejected = []; currentKey = null; save(); showSide(false);
             $("plan-resume").classList.add("hidden-mode");
         });
-        $("plan-replace-btn")?.addEventListener("click", replaceChecked);
         $("plan-shopping-btn")?.addEventListener("click", () => {
             const recipes = shoppingRecipes();
             const total = plan.meals.length;

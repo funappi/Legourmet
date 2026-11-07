@@ -691,3 +691,7 @@ body.no-scroll { overflow: hidden; }
     body.has-plan-side .result-panel { padding-right: 330px; }
     body.has-plan-side .plan-side { position: fixed; right: 20px; top: 20px; width: 290px; max-height: calc(100vh - 40px); margin: 0; z-index: 50; }
 }
+
+.plan-reroll { flex: none; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--element-bg); font-size: 0.95rem; cursor: pointer; transition: 0.15s; }
+.plan-reroll:hover:not(:disabled) { border-color: var(--accent); background: rgba(244, 63, 94, 0.1); }
+.plan-reroll:disabled { opacity: 0.25; cursor: not-allowed; }
