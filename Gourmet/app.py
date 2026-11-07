@@ -1,6 +1,7 @@
 from flask import Flask, request, send_from_directory, Response
 from flask_cors import CORS
 from groq import Groq
+import functools
 import os
 import re
 import json
@@ -49,6 +50,11 @@ def json_response(data, status=200):
         mimetype='application/json; charset=utf-8'
     )
 
+# Les modèles gpt-oss de Groq réfléchissent longuement par défaut : « low » divise le temps de réponse.
+# Réglable avec la variable d'environnement GROQ_REASONING (low, medium, high ; vide = désactivé).
+_REASONING = os.getenv("GROQ_REASONING", "low").strip()
+LLM_EXTRA = {"reasoning_effort": _REASONING} if _REASONING and "gpt-oss" in os.getenv("GROQ_MODEL", "openai/gpt-oss-120b") else {}
+
 def ask_llm(prompt):
     """Gère l'appel à l'IA de manière centralisée pour éviter le code dupliqué."""
     try:
@@ -59,7 +65,8 @@ def ask_llm(prompt):
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
-            temperature=0.25
+            temperature=0.25,
+            **LLM_EXTRA
         )
         return json.loads(completion.choices[0].message.content)
     except Exception as e:
@@ -266,23 +273,25 @@ def sanitize_variant(value):
 def index():
     return send_from_directory('static', 'index.html')
 
+@functools.lru_cache(maxsize=512)
+def _search_cached(query):
+    query_smart = query.replace("oe", "œ")
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute(
+            "SELECT DISTINCT nom, categorie, calories FROM ingredients WHERE nom LIKE ? OR nom LIKE ? LIMIT 8",
+            (f"%{query}%", f"%{query_smart}%")
+        )
+        return tuple(dict(row) for row in cursor.fetchall())
+
 @app.route('/api/ingredients', methods=['GET'])
 def search_ingredients():
     query = request.args.get('q', '').strip().lower()
     if len(query) < 2:
         return json_response([])
 
-    query_smart = query.replace("oe", "œ")
-
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute(
-                "SELECT DISTINCT nom, categorie, calories FROM ingredients WHERE nom LIKE ? OR nom LIKE ? LIMIT 8",
-                (f"%{query}%", f"%{query_smart}%")
-            )
-            results = [dict(row) for row in cursor.fetchall()]
-        return json_response(results)
+        return json_response(list(_search_cached(query)))
     except Exception as e:
         print(f"Erreur DB: {e}")
         return json_response([])

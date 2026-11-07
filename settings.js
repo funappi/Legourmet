@@ -161,7 +161,10 @@ const Settings = (() => {
     };
     const allergenById = (id) => ALLERGEN_CATALOG.find(a => a.id === id);
 
+    // Les termes ne changent que si le texte change : on évite de tout re-analyser à chaque affichage de recette.
+    let _termsFor = null, _termsCache = [];
     function exclusionTerms() {
+        if (_termsFor === data.avoidText) return _termsCache;
         const terms = [];
         const seenAllergens = new Set();
         parseTerms(data.avoidText).forEach(term => {
@@ -175,6 +178,7 @@ const Settings = (() => {
                 terms.push({ label: term, kws: [term], safe: [], allergen: false });
             }
         });
+        _termsFor = data.avoidText; _termsCache = terms;
         return terms;
     }
 

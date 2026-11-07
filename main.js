@@ -971,6 +971,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // --- 10. MODULES D'EXPORTATIONS PREMIUM & CAPTURE ---
+    // html2canvas (~200 Ko) ne sert qu'au partage en image : on ne le télécharge qu'au premier clic.
+    let html2canvasPromise = null;
+    function loadHtml2Canvas() {
+        if (window.html2canvas) return Promise.resolve();
+        if (!html2canvasPromise) {
+            html2canvasPromise = new Promise((resolve, reject) => {
+                const s = document.createElement("script");
+                s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+                s.onload = resolve;
+                s.onerror = () => { html2canvasPromise = null; reject(new Error("html2canvas")); };
+                document.head.appendChild(s);
+            });
+        }
+        return html2canvasPromise;
+    }
+
     const btnShareScreenshot = DOM.get("btn-share-screenshot");
     if (btnShareScreenshot) {
         btnShareScreenshot.addEventListener("click", async () => {
@@ -984,6 +1000,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (actionsContainer) actionsContainer.style.display = "none";
             
             try {
+                await loadHtml2Canvas();
                 const canvas = await html2canvas(recipeCard, { 
                     useCORS: true, 
                     allowTaint: false, 
