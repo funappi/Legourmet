@@ -65,7 +65,7 @@ const Settings = (() => {
         version: 2,
         likesText: "",      // texte libre : ce que j'aime (lu tel quel par l'IA)
         avoidText: "",      // texte libre : ce que je n'aime pas + allergies (lu tel quel par l'IA)
-        prefs: { portions: 1, spice: "", cuisines: [] },
+        prefs: { portions: 1, spice: "", cuisines: [], units: { system: "metric", temp: "c" } },
         panel: null,        // réglages par défaut du panneau de contrôle (état de ses boutons), ou null
         panelEnabled: true  // false : le panneau démarre vide, même si des réglages sont enregistrés
     });
@@ -92,6 +92,8 @@ const Settings = (() => {
             }
             d.prefs.portions = clamp(parseInt(p.portions, 10) || 1, 1, 12);
             d.prefs.spice = SPICE_LEVELS.some(s => s.id === p.spice) ? p.spice : "";
+            const u = p.units || {};
+            d.prefs.units = { system: u.system === "us" ? "us" : "metric", temp: ["f", "th"].includes(u.temp) ? u.temp : "c" };
             d.prefs.cuisines = Array.isArray(p.cuisines) ? p.cuisines.filter(s => typeof s === "string") : [];
             d.panel = sanitizePanel(raw.panel);
             d.panelEnabled = raw.panelEnabled !== false;
@@ -552,6 +554,27 @@ const Settings = (() => {
                 }
             })));
         };
+        // Unités : un choix obligatoire par rangée (pas de désélection)
+        const unitChoice = (containerId, items, key) => {
+            const box = document.getElementById(containerId);
+            if (!box) return;
+            box.innerHTML = "";
+            items.forEach(({ value, label }) => box.appendChild(makeChip({
+                value, label, pressed: data.prefs.units[key] === value,
+                onToggle: () => {
+                    data.prefs.units[key] = value;
+                    box.querySelectorAll(".chip").forEach(c => {
+                        const active = c.dataset.value === value;
+                        c.classList.toggle("active", active); c.setAttribute("aria-pressed", String(active));
+                    });
+                    persist();
+                    window.dispatchEvent(new Event("lg:units-changed"));
+                }
+            })));
+        };
+        unitChoice("pref-unit-system", [{ value: "metric", label: "Métrique (g, ml)" }, { value: "us", label: "Américain (oz, cups)" }], "system");
+        unitChoice("pref-unit-temp", [{ value: "c", label: "°C" }, { value: "f", label: "°F" }, { value: "th", label: "Thermostat" }], "temp");
+
         singleChoice("pref-spice", SPICE_LEVELS.map(s => ({ value: s.id, label: s.label })), "spice");
 
         // Cuisines préférées (multiple), reprises de la liste « Cuisine Fusion »
@@ -642,5 +665,21 @@ const Settings = (() => {
         });
     }
 
-    return { init, open, close, isOpen, exclusionsPayload, exclusionCount, directivePrefix, softPrefsLine, check, defaultPortions, applyPanelDefaults, parseTerms };
+    const API_KEY_STORE = "lg_apikey";
+    const apiKey = () => { try { return (localStorage.getItem(API_KEY_STORE) || "").trim(); } catch (e) { return ""; } };
+    function initApiKey() {
+        const input = document.getElementById("pref-api-key");
+        if (!input) return;
+        input.value = apiKey();
+        input.addEventListener("input", () => {
+            try { input.value.trim() ? localStorage.setItem(API_KEY_STORE, input.value.trim()) : localStorage.removeItem(API_KEY_STORE); flashStatus("Enregistré ✓"); }
+            catch (e) { flashStatus("⚠️ Impossible d'enregistrer"); }
+        });
+        document.getElementById("api-key-toggle")?.addEventListener("click", () => { input.type = input.type === "password" ? "text" : "password"; });
+        document.getElementById("api-key-clear")?.addEventListener("click", () => { input.value = ""; input.dispatchEvent(new Event("input")); });
+    }
+
+    const units = () => data.prefs.units;
+
+    return { apiKey, initApiKey, units, init, open, close, isOpen, exclusionsPayload, exclusionCount, directivePrefix, softPrefsLine, check, defaultPortions, applyPanelDefaults, parseTerms };
 })();

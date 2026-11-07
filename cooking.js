@@ -177,7 +177,7 @@ const Cooking = (() => {
     // ---------- affichage d'une étape ----------
     function renderStep() {
         const steps = recipe.steps;
-        const text = String(steps[index] || "");
+        const text = Units.text(String(steps[index] || ""));
         $("cook-step-count").textContent = `Étape ${index + 1} sur ${steps.length}`;
         $("cook-progress-fill").style.width = `${((index + 1) / steps.length) * 100}%`;
         const target = $("cook-step-text");
