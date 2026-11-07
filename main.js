@@ -6,6 +6,8 @@ const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, c => (
 const AppState = {
     activeRecipePack: null,
     activeRecipeContext: null,   // { hardware, complex, risk } au moment où la recette affichée a été générée
+    activeHistoryId: null,       // entrée de l'historique correspondant à la recette affichée
+    previousVariant: null,       // { key, recipe } : version avant le dernier ajustement/régénération (pour annuler)
     currentSelectedVariant: "original",
     currentPortions: 1,
     seenIdeaTitles: [],          // idées déjà proposées : évite de les redonner quand on clique « Essaie encore »
@@ -140,15 +142,19 @@ const Loader = (() => {
 
         isVisible,
 
-        show({ step = 1, title = "Alchimie Culinaire en Cours...", onCancel: cancelFn = null } = {}) {
+        // art : illustrations SVG qui défilent (longues générations) ; progress : { label, value 0..1 }
+        show({ step = 1, title = "Alchimie Culinaire en Cours...", onCancel: cancelFn = null, art = false, progress = null } = {}) {
             clearTimers();
             if (!isVisible()) lastFocus = document.activeElement;
             onCancel = cancelFn;
             resolveError = null;
 
             setStep(step);
+            DOM.toggle(DOM.get("loading-steps"), step > 0);   // step 0 = action ponctuelle (ajustement...), pas d'étapes à afficher
             DOM.get("loading-title").textContent = title;
-            DOM.toggle(DOM.get("loading-spinner"), true);
+            DOM.toggle(DOM.get("loading-spinner"), !art);
+            if (art) LoaderArt.start(); else LoaderArt.stop();
+            this.setProgress(progress);
             DOM.toggle(DOM.get("loading-quip"), true);
             DOM.toggle(DOM.get("loading-slow"), false);
             DOM.toggle(DOM.get("loading-error-text"), false);
@@ -166,11 +172,23 @@ const Loader = (() => {
             DOM.get("loading-cancel-btn").focus();
         },
 
+        // Barre de progression des générations en plusieurs appels (null = masquée)
+        setProgress(progress) {
+            const box = DOM.get("loading-progress");
+            if (!box) return;
+            DOM.toggle(box, !!progress);
+            if (!progress) return;
+            DOM.get("loading-progress-label").textContent = progress.label || "";
+            DOM.get("loading-progress-fill").style.width = `${Math.round(Math.max(0, Math.min(1, progress.value || 0)) * 100)}%`;
+        },
+
         // Affiche l'erreur dans le même écran. Résout "retry" ou "close" selon le bouton choisi.
         showError(message) {
             clearTimers();
             onCancel = null;
             DOM.toggle(DOM.get("loading-spinner"), false);
+            LoaderArt.stop();
+            this.setProgress(null);
             DOM.toggle(DOM.get("loading-quip"), false);
             DOM.toggle(DOM.get("loading-slow"), false);
             DOM.get("loading-title").textContent = "Oups, ça n'a pas pris…";
@@ -185,6 +203,7 @@ const Loader = (() => {
 
         hide() {
             clearTimers();
+            LoaderArt.stop();
             onCancel = null;
             resolveError = null;
             DOM.toggle(DOM.get("loading-display"), false);
@@ -256,12 +275,38 @@ const PlateImage = (() => {
 document.addEventListener("DOMContentLoaded", () => {
 
     Loader.init();
+    Settings.init();   // allergies, exclusions, préférences (localStorage)
+
+    // Nombre de personnes par défaut (paramètre), appliqué à chaque nouvelle recette ouverte
+    function resetPortions() {
+        AppState.currentPortions = Settings.defaultPortions();
+        DOM.get("portion-display").innerText = String(AppState.currentPortions);
+    }
+    resetPortions();
+
+    // Ouvre une recette (nouvelle génération, favori ou historique) dans la fiche
+    function openRecipePack({ pack, context = null, historyId = null, keepMenu = false, fromPlan = false }) {
+        if (!keepMenu) Menu.hideTabs();
+        if (!fromPlan) Planning.hideSide();
+        AppState.activeRecipePack = pack;
+        AppState.activeRecipeContext = context;
+        AppState.activeHistoryId = historyId;
+        AppState.previousVariant = null;
+        resetPortions();
+        DOM.get("variationTabsZone").style.display = "flex";
+        DOM.getAll('.var-tab').forEach(t => t.classList.toggle('is-missing', !pack[t.dataset.variant]));
+        const origTab = Array.from(DOM.getAll('.var-tab')).find(t => t.dataset.variant === "original");
+        if (origTab) origTab.click();
+        UIManager.closeSidebar();
+    }
 
     // Réveille le serveur dès l'arrivée sur la page : le premier appel est souvent le plus lent.
     fetch(`${BACKEND_URL}/`).catch(() => {});
 
     // --- 1. MENUS & THÈME ---
     DOM.get("burger-toggle")?.addEventListener("click", UIManager.openSidebar);
+    // Sur téléphone, on démarre sur l'accueil (le menu des réglages reste à un tap via ☰).
+    if (window.matchMedia?.("(max-width: 768px)").matches) UIManager.closeSidebar();
     DOM.get("close-sidebar-btn")?.addEventListener("click", UIManager.closeSidebar);
 
     DOM.get("theme-toggle")?.addEventListener("click", () => {
@@ -276,6 +321,7 @@ document.addEventListener("DOMContentLoaded", () => {
             card.addEventListener('click', () => {
                 const container = DOM.get(containerId);
                 if (!container || container.classList.contains('disabled')) return;
+                if (card.classList.contains('type-card') && card.parentElement.classList.contains('is-auto')) return;
 
                 if (!isMultiple) {
                     if (card.classList.contains('active')) {
@@ -293,17 +339,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     setupSelectableCards('.equip-card', 'c-equip', true);
-    // Dessert => Sucré ; Entrée/Plat => on repasse de Sucré à Salé. Le dernier clic de l'utilisateur gagne.
-    setupSelectableCards('.course-card', 'c-diet', false, (card) => {
-        if (!card.classList.contains('active')) return;
+    // Entrée / Plat / Dessert : on peut en choisir 1, 2 ou 3. Avec un seul, Dessert <=> Sucré restent liés ;
+    // avec plusieurs, le type est automatique (Dessert = sucré, le reste = salé) et le choix du type est grisé.
+    const selectedCourses = () => Array.from(DOM.getAll('.course-card.active')).map(c => c.dataset.course);
+    function syncTypeWithCourses(clickedCard = null) {
+        const courses = selectedCourses();
         const typeCards = Array.from(DOM.getAll('.type-card'));
+        const typeGrid = typeCards[0]?.parentElement;
+        const auto = courses.length >= 2;
+        typeGrid?.classList.toggle('is-auto', auto);
+        DOM.toggle(DOM.get('type-auto-note'), auto);
+        if (auto) { typeCards.forEach(c => c.classList.remove('active')); return; }
+        if (!clickedCard || !clickedCard.classList.contains('active')) return;
         const activeType = typeCards.find(c => c.classList.contains('active'));
-        const isDessert = card.dataset.course === "Dessert";
+        const isDessert = clickedCard.dataset.course === "Dessert";
         if (isDessert || activeType?.dataset.type === "Sucré") {
             const wanted = isDessert ? "Sucré" : "Salé";
             typeCards.forEach(c => c.classList.toggle('active', c.dataset.type === wanted));
         }
-    });
+    }
+    window.LG_syncCourses = () => syncTypeWithCourses();
+    setupSelectableCards('.course-card', 'c-diet', true, syncTypeWithCourses);
     // Choisir « Salé » alors que Dessert est sélectionné : on retire Dessert pour rester cohérent.
     setupSelectableCards('.type-card', 'c-diet', false, (card) => {
         if (card.classList.contains('active') && card.dataset.type === "Salé") {
@@ -314,21 +370,37 @@ document.addEventListener("DOMContentLoaded", () => {
     setupSelectableCards('.style-card', 'c-diet', false);
 
     // --- 2bis. ÉCRAN D'ACCUEIL ---
+    // Le champ de l'accueil et le champ « Inspiration » du menu sont le même texte : on les garde synchronisés.
     const promptInput = DOM.get("simple-prompt-input");
+    const heroInput = DOM.get("hero-input");
+    if (heroInput && promptInput) {
+        heroInput.value = promptInput.value;
+        heroInput.addEventListener("input", () => { promptInput.value = heroInput.value; });
+        promptInput.addEventListener("input", () => { heroInput.value = promptInput.value; });
+    }
+    const flashHero = () => {
+        if (!heroInput) return;
+        if (window.matchMedia?.("(pointer: fine)").matches) heroInput.focus();   // pas de clavier qui surgit sur téléphone
+        const form = DOM.get("hero-ask");
+        form?.classList.remove("prompt-flash");
+        void form?.offsetWidth;
+        form?.classList.add("prompt-flash");
+    };
+    DOM.get("hero-ask")?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (promptInput && heroInput) promptInput.value = heroInput.value;
+        startIdeation(false);
+    });
     DOM.getAll(".welcome-chip").forEach(chip => {
         chip.addEventListener("click", () => {
-            if (promptInput) promptInput.value = chip.dataset.prompt || "";
+            const text = chip.dataset.prompt || "";
+            if (promptInput) promptInput.value = text;
+            if (heroInput) heroInput.value = text;
             if (chip.dataset.course) {
                 const courseCard = Array.from(DOM.getAll('.course-card')).find(c => c.dataset.course === chip.dataset.course);
                 if (courseCard && !courseCard.classList.contains('active')) courseCard.click();
             }
-            UIManager.openSidebar();   // sur mobile, le champ est dans le menu
-            if (promptInput) {
-                if (window.matchMedia?.("(pointer: fine)").matches) promptInput.focus();   // pas de clavier qui surgit sur téléphone
-                promptInput.classList.remove("prompt-flash");
-                void promptInput.offsetWidth;
-                promptInput.classList.add("prompt-flash");
-            }
+            flashHero();
         });
     });
     DOM.get("welcome-surprise-btn")?.addEventListener("click", () => startIdeation(false));
@@ -366,12 +438,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- 5. GESTION DES ONGLETS RECETTE ---
     DOM.getAll(".var-tab").forEach(tab => {
-        tab.addEventListener("click", () => {
-            if (!AppState.activeRecipePack) return;
+        tab.addEventListener("click", async () => {
+            const pack = AppState.activeRecipePack;
+            if (!pack) return;
+            const key = tab.dataset.variant;
+            if (!pack[key]) {   // recette du planning / du menu : les autres versions se génèrent à la demande
+                if (!(await generateMissingVariant(key))) return;
+            }
             DOM.getAll(".var-tab").forEach(t => t.classList.remove("active-variant"));
             tab.classList.add("active-variant");
-            AppState.currentSelectedVariant = tab.dataset.variant;
-            window.renderSelectedVariant(AppState.currentSelectedVariant);
+            AppState.currentSelectedVariant = key;
+            window.renderSelectedVariant(key);
         });
     });
 
@@ -397,8 +474,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Réglages par défaut du panneau (Préférences) : appliqués une fois tous les écouteurs branchés.
+    Settings.applyPanelDefaults();
+
     // --- 7. MOTEUR API (PAYLOAD & FETCH) ---
-    function buildPayload() {
+    function buildPayload(courseOverride = null) {
         const extractActiveData = (selector, attr) => Array.from(DOM.getAll(`${selector}.active`)).map(el => el.dataset[attr]);
         const isChecked = id => DOM.get(`t-${id}`)?.checked;
         
@@ -429,9 +509,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const inspiration = DOM.get("simple-prompt-input")?.value.trim();
 
-        const course = isChecked('diet') ? extractActiveData('.course-card', 'course')[0] : undefined;
+        // Plusieurs moments du repas cochés : l'appelant précise lequel on prépare (courseOverride) ; sinon le premier.
+        const course = courseOverride || (isChecked('diet') ? extractActiveData('.course-card', 'course')[0] : undefined);
         const selectedType = isChecked('diet') ? extractActiveData('.type-card', 'type')[0] : undefined;
-        const dishType = course === "Dessert" ? "Sucré" : (selectedType || "Salé");
+        const dishType = course === "Dessert" ? "Sucré" : (courseOverride ? "Salé" : (selectedType || "Salé"));
 
         let levelPromptSystem = hasIngredients 
             ? "INSTRUCTION STRICTE : Tu DOIS construire une recette réaliste centrée sur les ingrédients fournis par l'utilisateur. Ne rajoute aucun ingrédient central majeur non listé (sauf sel, poivre, huile)."
@@ -460,8 +541,13 @@ document.addEventListener("DOMContentLoaded", () => {
             risk: window.currentRisk,
             time: window.currentComplex,
             // La consigne de service passe en tête : le serveur tronque la directive à 900 caractères.
-            chef_instruction_directive: (course ? `${COURSE_DIRECTIVES[course]}\n` : "") + levelPromptSystem,
-            dish_type: isChecked('diet') ? dishType : "Salé",
+            // Les exclusions (allergies, aversions) passent AVANT tout le reste : c'est la partie critique.
+            chef_instruction_directive: Settings.directivePrefix()
+                + (course ? `${COURSE_DIRECTIVES[course]}\n` : "")
+                + Settings.softPrefsLine(fusionString === "Auto_FoodPairing")
+                + levelPromptSystem,
+            exclusions: Settings.exclusionsPayload(),
+            dish_type: (isChecked('diet') || courseOverride) ? dishType : "Salé",
             diet_profile: isChecked('diet') ? extractActiveData('.diet-card', 'diet')[0] || "Aucun" : "Aucun",
             cooking_style: isChecked('diet') ? extractActiveData('.style-card', 'style')[0] || "Libre" : "Libre"
         };
@@ -478,10 +564,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Une tentative : affiche le chargement, appelle le serveur, renvoie { data } | { error } | { cancelled }
-    async function attemptRequest(endpoint, payload, { step, title, validate }) {
+    async function attemptRequest(endpoint, payload, { step, title, validate, art = false, progress = null }) {
         const controller = new AbortController();
         let cancelled = false;
-        Loader.show({ step, title, onCancel: () => { cancelled = true; controller.abort(); } });
+        Loader.show({ step, title, art, progress, onCancel: () => { cancelled = true; controller.abort(); } });
         const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
         try {
             const response = await fetch(`${BACKEND_URL}/${endpoint}`, {
@@ -515,7 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function apiRequest(endpoint, payload, options) {
         while (true) {
             const result = await attemptRequest(endpoint, payload, options);
-            if (result.data !== undefined) { Loader.hide(); return result.data; }
+            if (result.data !== undefined) { if (!options?.keepLoader) Loader.hide(); return result.data; }
             if (result.cancelled) { Loader.hide(); return null; }
             const choice = await Loader.showError(result.error);
             if (choice !== "retry") { Loader.hide(); return null; }
@@ -527,6 +613,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Phase 1 : 3 idées. « isRetry » = clic sur « Essaie encore » : on demande des idées différentes.
     async function startIdeation(isRetry = false) {
         if (requestInFlight) return;
+        if (DOM.get('t-diet')?.checked && selectedCourses().length >= 2) {   // Entrée + Plat (+ Dessert) : un menu complet
+            return Menu.start(selectedCourses());
+        }
         requestInFlight = true;
         try {
             if (!isRetry) AppState.seenIdeaTitles = [];
@@ -579,16 +668,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!data) return;
 
             UIManager.toggleModal("ideas-modal-overlay", false);
-            AppState.activeRecipePack = data;
-            AppState.activeRecipeContext = context;
-            AppState.currentPortions = 1;
-            DOM.get("portion-display").innerText = "1";
-            DOM.get("variationTabsZone").style.display = "flex";
-
-            const origTab = Array.from(DOM.getAll('.var-tab')).find(t => t.dataset.variant === "original");
-            if (origTab) origTab.click();
-
-            UIManager.closeSidebar();
+            const historyId = RecipeHistory.add({ pack: data, context });
+            openRecipePack({ pack: data, context, historyId });
         } finally {
             requestInFlight = false;
         }
@@ -627,17 +708,8 @@ document.addEventListener("DOMContentLoaded", () => {
             
             card.querySelector('.btn-load-fav').onclick = (e) => { 
                 e.stopPropagation();
-                AppState.activeRecipePack = fav.pack;
-                AppState.activeRecipeContext = fav.context || null;
-                AppState.currentPortions = 1;
-                DOM.get("portion-display").innerText = "1";
-                DOM.get("variationTabsZone").style.display = "flex";
                 UIManager.toggleModal("favorites-modal-overlay", false);
-                
-                const origTab = Array.from(DOM.getAll('.var-tab')).find(t => t.dataset.variant === "original");
-                if (origTab) origTab.click();
-                
-                UIManager.closeSidebar();
+                openRecipePack({ pack: fav.pack, context: fav.context || null });
             };
 
             card.querySelector('.btn-del-fav').onclick = (e) => {
@@ -645,7 +717,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 AppState.favoris.splice(index, 1); 
                 localStorage.setItem("lg_favs", JSON.stringify(AppState.favoris)); 
                 renderFavoritesModal(); 
-                updateFavStarUI(DOM.get("recipeTitle").innerText);
+                updateFavStarUI(DOM.get("recipeTitle").textContent);
             };
             
             favsContainer.appendChild(card);
@@ -662,19 +734,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // --- 9. ÉTOILE FAVORIS ---
+    // Comparaison insensible à la casse : d'anciens favoris ont été enregistrés en MAJUSCULES.
+    const sameTitle = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
     const updateFavStarUI = (title) => {
         const btn = DOM.get("btn-favorite-recipe");
         if(!btn) return;
         btn.style.display = "inline-block";
-        const isFav = AppState.favoris.some(f => f.title === title);
+        const isFav = AppState.favoris.some(f => sameTitle(f.title, title));
         btn.innerHTML = isFav ? "★" : "☆";
         btn.classList.toggle("is-favorite", isFav);
     };
 
     DOM.get("btn-favorite-recipe")?.addEventListener("click", () => {
         if (!AppState.activeRecipePack) return;
-        const currentTitle = DOM.get("recipeTitle").innerText;
-        const index = AppState.favoris.findIndex(f => f.title === currentTitle);
+        const currentTitle = DOM.get("recipeTitle").textContent;
+        const index = AppState.favoris.findIndex(f => sameTitle(f.title, currentTitle));
         
         if (index > -1) AppState.favoris.splice(index, 1);
         else AppState.favoris.push({ title: currentTitle, pack: AppState.activeRecipePack, context: AppState.activeRecipeContext });
@@ -683,7 +757,236 @@ document.addEventListener("DOMContentLoaded", () => {
         updateFavStarUI(currentTitle);
     });
 
+    // --- 9bis. HISTORIQUE (20 dernières recettes) ---
+    function renderHistoryModal() {
+        const box = DOM.get("history-container");
+        if (!box) return;
+        box.innerHTML = "";
+        const entries = RecipeHistory.list();
+        DOM.toggle(DOM.get("clear-history-btn"), entries.length > 0);
+
+        if (!entries.length) {
+            const empty = document.createElement("p");
+            empty.style.cssText = "color: var(--text-muted); text-align: center; padding: 20px;";
+            empty.textContent = `Rien pour l'instant : tes ${RecipeHistory.MAX} dernières recettes apparaîtront ici.`;
+            box.appendChild(empty);
+            return;
+        }
+
+        entries.forEach(entry => {
+            const card = document.createElement("div");
+            card.className = "idea-card";
+            card.style.cssText = "flex-direction: row; justify-content: space-between; align-items: center; gap: 12px;";
+
+            const info = document.createElement("div");
+            info.style.cssText = "flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;";
+            const title = document.createElement("h4");
+            title.style.margin = "0";
+            title.textContent = entry.title;
+            const meta = document.createElement("span");
+            meta.className = "history-meta";
+            meta.textContent = formatRelativeDate(entry.savedAt);
+            info.append(title, meta);
+
+            const actions = document.createElement("div");
+            actions.style.cssText = "display: flex; gap: 10px;";
+            const openBtn = document.createElement("button");
+            openBtn.className = "control-btn";
+            openBtn.style.cssText = "border-color: var(--healthy-color); color: var(--healthy-color);";
+            openBtn.textContent = "Ouvrir";
+            openBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                UIManager.toggleModal("history-modal-overlay", false);
+                openRecipePack({ pack: entry.pack, context: entry.context, historyId: entry.id });
+            });
+            const delBtn = document.createElement("button");
+            delBtn.className = "control-btn";
+            delBtn.style.cssText = "border-color: var(--accent); color: var(--accent);";
+            delBtn.setAttribute("aria-label", `Supprimer ${entry.title} de l'historique`);
+            delBtn.textContent = "✖";
+            delBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                RecipeHistory.remove(entry.id);
+                renderHistoryModal();
+            });
+            actions.append(openBtn, delBtn);
+
+            card.append(info, actions);
+            box.appendChild(card);
+        });
+    }
+
+    DOM.get("btn-open-history")?.addEventListener("click", () => {
+        renderHistoryModal();
+        UIManager.toggleModal("history-modal-overlay", true);
+    });
+    DOM.get("close-history-modal-btn")?.addEventListener("click", () => UIManager.toggleModal("history-modal-overlay", false));
+    DOM.get("clear-history-btn")?.addEventListener("click", () => {
+        if (!confirm("Vider tout l'historique ? Les favoris ne sont pas touchés.")) return;
+        RecipeHistory.clear();
+        renderHistoryModal();
+    });
+
+    // --- 9ter. AJUSTER / RÉGÉNÉRER LA VERSION AFFICHÉE ---
+    const isValidVariant = (r) => !!r && typeof r === "object" && Array.isArray(r.ingredients) && r.ingredients.length > 0 && Array.isArray(r.steps) && r.steps.length > 0;
+
+    // Garde l'historique et les favoris à jour quand une version change
+    function syncAfterPackChange(oldTitle, newTitle) {
+        const pack = AppState.activeRecipePack;
+        RecipeHistory.update(AppState.activeHistoryId, pack);
+        let favChanged = false;
+        AppState.favoris.forEach(f => {
+            if (f.pack === pack || sameTitle(f.title, oldTitle)) {
+                f.pack = pack;
+                if (sameTitle(f.title, oldTitle) && newTitle) f.title = newTitle;
+                favChanged = true;
+            }
+        });
+        if (favChanged) localStorage.setItem("lg_favs", JSON.stringify(AppState.favoris));
+        window.dispatchEvent(new Event("lg:pack-changed"));
+    }
+
+    function applyVariantChange(key, newRecipe) {
+        const pack = AppState.activeRecipePack;
+        const previous = pack[key];
+        AppState.previousVariant = { key, recipe: previous };
+        pack[key] = newRecipe;
+        syncAfterPackChange(previous?.title, newRecipe.title);
+        window.renderSelectedVariant(key);
+    }
+
+    function equipmentForRequest() {
+        const hardware = AppState.activeRecipeContext?.hardware;
+        return hardware && hardware !== "Libre" && hardware !== "--" ? hardware.split(", ") : ["Auto_FoodPairing"];
+    }
+
+    async function adjustCurrentVariant(instruction) {
+        const key = AppState.currentSelectedVariant;
+        const current = AppState.activeRecipePack?.[key];
+        const text = String(instruction || "").trim().slice(0, 380);
+        if (!current || text.length < 2 || requestInFlight) return;
+        requestInFlight = true;
+        try {
+            const data = await apiRequest('adjust-recipe', {
+                instruction: text,
+                variant_key: key,
+                recipe: current,
+                equipment: equipmentForRequest(),
+                exclusions: Settings.exclusionsPayload()
+            }, {
+                step: 0,
+                title: "Le chef ajuste la recette...",
+                validate: d => isValidVariant(d?.recipe)
+            });
+            if (!data) return;
+            applyVariantChange(key, data.recipe);
+            DOM.get("tweak-input").value = "";
+        } finally {
+            requestInFlight = false;
+        }
+    }
+
+    async function regenerateCurrentVariant() {
+        const key = AppState.currentSelectedVariant;
+        const pack = AppState.activeRecipePack;
+        const current = pack?.[key];
+        if (!current || requestInFlight) return;
+        requestInFlight = true;
+        try {
+            const data = await apiRequest('regenerate-variant', {
+                variant_key: key,
+                idea_title: pack.original?.title || current.title,
+                previous_title: current.title,
+                base_recipe: key === "original" ? null : pack.original,
+                equipment: equipmentForRequest(),
+                exclusions: Settings.exclusionsPayload()
+            }, {
+                step: 0,
+                title: "Le chef refait cette version...",
+                validate: d => isValidVariant(d?.recipe)
+            });
+            if (!data) return;
+            applyVariantChange(key, data.recipe);
+        } finally {
+            requestInFlight = false;
+        }
+    }
+
+    // Génère une version (healthy, protéinée…) qui n'existe pas encore dans la recette ouverte. Renvoie true si ok.
+    async function generateMissingVariant(key) {
+        const pack = AppState.activeRecipePack;
+        if (!pack?.original || requestInFlight) return false;
+        requestInFlight = true;
+        try {
+            const data = await apiRequest('regenerate-variant', {
+                variant_key: key,
+                idea_title: pack.original.title,
+                previous_title: "",
+                base_recipe: pack.original,
+                equipment: equipmentForRequest(),
+                exclusions: Settings.exclusionsPayload()
+            }, { step: 0, title: "Le chef prépare cette version...", validate: d => isValidVariant(d?.recipe) });
+            if (!data) return false;
+            pack[key] = data.recipe;
+            syncAfterPackChange(null, null);
+            return true;
+        } finally {
+            requestInFlight = false;
+        }
+    }
+
+    const tweakInput = DOM.get("tweak-input");
+    const runTweak = () => {
+        const text = tweakInput?.value.trim() || "";
+        if (text.length < 2) {
+            tweakInput?.focus();
+            tweakInput?.classList.remove("prompt-flash"); void tweakInput?.offsetWidth; tweakInput?.classList.add("prompt-flash");
+            return;
+        }
+        adjustCurrentVariant(text);
+    };
+    DOM.get("btn-tweak")?.addEventListener("click", runTweak);
+    tweakInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); runTweak(); } });
+    DOM.getAll("#tweak-suggestions [data-tweak]").forEach(chip => {
+        chip.addEventListener("click", () => { if (tweakInput) tweakInput.value = chip.dataset.tweak; adjustCurrentVariant(chip.dataset.tweak); });
+    });
+    DOM.get("btn-regenerate-variant")?.addEventListener("click", regenerateCurrentVariant);
+
+    DOM.get("btn-undo-tweak")?.addEventListener("click", () => {
+        const prev = AppState.previousVariant;
+        if (!prev || !AppState.activeRecipePack) return;
+        const current = AppState.activeRecipePack[prev.key];
+        AppState.activeRecipePack[prev.key] = prev.recipe;
+        AppState.previousVariant = null;
+        syncAfterPackChange(current?.title, prev.recipe?.title);
+        window.renderSelectedVariant(prev.key);
+    });
+
+    // Corriger automatiquement une recette qui contient un ingrédient exclu
+    DOM.get("btn-fix-exclusions")?.addEventListener("click", () => {
+        const found = AppState.lastViolations || [];
+        if (!found.length) return;
+        const list = found.map(v => `${v.label} (${v.ingredients.join(", ")})`).join(" ; ");
+        adjustCurrentVariant(`Retire et remplace par des alternatives sûres ces ingrédients exclus : ${list}. Le plat doit rester cohérent et savoureux.`);
+    });
+
     // --- 10. MODULES D'EXPORTATIONS PREMIUM & CAPTURE ---
+    // html2canvas (~200 Ko) ne sert qu'au partage en image : on ne le télécharge qu'au premier clic.
+    let html2canvasPromise = null;
+    function loadHtml2Canvas() {
+        if (window.html2canvas) return Promise.resolve();
+        if (!html2canvasPromise) {
+            html2canvasPromise = new Promise((resolve, reject) => {
+                const s = document.createElement("script");
+                s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+                s.onload = resolve;
+                s.onerror = () => { html2canvasPromise = null; reject(new Error("html2canvas")); };
+                document.head.appendChild(s);
+            });
+        }
+        return html2canvasPromise;
+    }
+
     const btnShareScreenshot = DOM.get("btn-share-screenshot");
     if (btnShareScreenshot) {
         btnShareScreenshot.addEventListener("click", async () => {
@@ -697,6 +1000,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (actionsContainer) actionsContainer.style.display = "none";
             
             try {
+                await loadHtml2Canvas();
                 const canvas = await html2canvas(recipeCard, { 
                     useCORS: true, 
                     allowTaint: false, 
@@ -722,6 +1026,9 @@ document.addEventListener("DOMContentLoaded", () => {
                                 splitCols.style.gap = "35px";
                             }
                             
+                            // Les zones d'interface (ajustement, avertissement) n'ont rien à faire sur l'image partagée
+                            clonedCard.querySelectorAll(".recipe-tweak, #exclusion-warning").forEach(el => { el.style.display = "none"; });
+
                             // On répare le flex des temps (Préparation, Cuisson, Total)
                             const timeRow = clonedCard.querySelector(".mrcook-time-row");
                             if (timeRow) {
@@ -780,6 +1087,43 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // --- 10bis. PONT pour les modules Menu / Planning / Courses ---
+    const LG = {
+        buildPayload, apiRequest, openRecipePack, isValidVariant, Loader, RecipeHistory,
+        // Un seul plat généré à la fois (planning, menu) : ménage le quota du plan gratuit.
+        async generateMeal({ course, slot = "", avoid = [], menuTitles = [], vary = true, inspiration = "", title }) {
+            const p = buildPayload(course);
+            p.course = course; p.slot = slot; p.vary = vary; p.inspiration = inspiration;
+            p.avoid_titles = avoid.slice(-30); p.menu_titles = menuTitles;
+            p.chef_instruction_directive = Settings.directivePrefix() + Settings.softPrefsLine(true);
+            const data = await apiRequest('generate-meal', p, { step: 0, art: true, title, validate: d => isValidVariant(d?.recipe) });
+            if (!data) return null;
+            return { pack: { original: data.recipe }, context: { hardware: window.currentHardware, complex: window.currentComplex, risk: window.currentRisk, course } };
+        },
+        setPortions: (n) => { AppState.currentPortions = n; DOM.get("portion-display").innerText = String(n); if (AppState.activeRecipePack) window.renderSelectedVariant(AppState.currentSelectedVariant); },
+        busy: () => requestInFlight,
+        setBusy: (v) => { requestInFlight = !!v; },
+        portions: () => AppState.currentPortions,
+        activePack: () => AppState.activeRecipePack,
+        openSidebar: UIManager.openSidebar,
+        closeSidebar: UIManager.closeSidebar
+    };
+    Menu.init(LG);
+    Planning.init(LG);
+    Shopping.init();
+
+    // Courses de la recette affichée (ou du menu complet s'il y en a un)
+    DOM.get("btn-shop-recipe")?.addEventListener("click", () => {
+        const pack = AppState.activeRecipePack;
+        const data = pack?.[AppState.currentSelectedVariant];
+        if (!data) return;
+        Shopping.open({
+            title: "Courses : " + data.title,
+            subtitle: `${AppState.currentPortions} personne${AppState.currentPortions > 1 ? "s" : ""}`,
+            recipes: [{ title: data.title, recipe: data, persons: AppState.currentPortions }]
+        });
+    });
+
     // --- 11. MOTEUR DE RENDU INTERACTIF ---
     window.renderSelectedVariant = function(variantKey) {
         const data = AppState.activeRecipePack[variantKey]; 
@@ -828,6 +1172,21 @@ document.addEventListener("DOMContentLoaded", () => {
             stepsList.querySelectorAll('p').forEach(p => p.addEventListener('click', () => p.classList.toggle('checked-step'))); 
         }
 
+        // Contrôle des allergies / ingrédients détestés (par mots-clés : réduit le risque, ne le supprime pas)
+        const { violations, badIndexes } = Settings.check(data);
+        AppState.lastViolations = violations;
+        if (violations.length) {
+            DOM.get("exclusion-warning-text").textContent = "⚠️ Attention : cette version contient peut-être des ingrédients que tu as exclus — "
+                + violations.map(v => `${v.label} : ${v.ingredients.join(", ")}`).join(" · ")
+                + ". Vérifie avant de cuisiner.";
+        }
+        DOM.toggle(DOM.get("exclusion-warning"), violations.length > 0);
+        if (ingList) ingList.querySelectorAll('li').forEach((li, i) => li.classList.toggle('is-excluded', badIndexes.has(i)));
+
+        // « Revenir à la version précédente » : seulement sur la version qui vient d'être modifiée
+        DOM.toggle(DOM.get("btn-undo-tweak"), !!AppState.previousVariant && AppState.previousVariant.key === variantKey);
+
+        DOM.getAll('.var-tab').forEach(t => t.classList.toggle('is-missing', !AppState.activeRecipePack[t.dataset.variant]));
         updateFavStarUI(data.title);
         DOM.get("recipeCard").classList.add("show");
     };

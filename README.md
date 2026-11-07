@@ -71,6 +71,9 @@ Contrairement aux générateurs de recettes génériques :
 * **Écran de chargement plein écran** : étape en cours (1/2 idées, 2/2 recette), phrases d'attente, message si le serveur est lent, bouton Annuler. En cas d'échec (serveur injoignable, trop de requêtes, délai de 60 s dépassé), un message clair et un bouton Réessayer remplacent l'ancien `alert()`.
 * **« Essaie encore »** relance réellement la génération d'idées en évitant celles déjà vues (`avoid_titles`).
 * **Saisie des ingrédients** : `Entrée` valide le texte tapé comme tag libre, qui reste toujours proposé dans les suggestions. Le thème choisi est mémorisé.
+* **Préférences** (bouton en haut à droite) : deux zones de texte libres, **« Mes préférences »** et **« Ce que je n'aime pas ou allergies »**, mémorisées dans le `localStorage` et lues telles quelles par l'IA ; l'appli en déduit aussi une liste d'éléments à contrôler (allergènes de l'UE reconnus). Réglages par défaut repliables (personnes, équipement, régime, épices, cuisines). Une section **« PROFIL UTILISATEUR »** est ajoutée au prompt système (plus un rappel final) ; le serveur **vérifie** ensuite la réponse du LLM et redemande une fois si un élément interdit s'y trouve, donc la recette de base les évite d'emblée. En dernier recours, le navigateur surligne l'ingrédient fautif et propose « Corriger avec l'IA ». Cela réduit le risque mais ne le supprime pas.
+* **Historique** : les 20 dernières recettes générées (réouverture en un clic, suppression, vidage), tenues à jour après chaque ajustement.
+* **Ajuster en une phrase** (« sans four », « moins épicé », « pour 4 avec ce qu'il me manque ») avec bouton *Revenir*, et **Régénérer cette version** sans toucher aux 3 autres.
 
 ---
 
@@ -111,7 +114,8 @@ Le système repose sur un **moteur hybride dégroupé** où Python joue le rôle
 
 ```text
 .
-├── index.html, main.js, inventory.js, style.css   # Front (GitHub Pages)
+├── index.html, main.js, style.css                 # Front (GitHub Pages)
+├── inventory.js, settings.js, history.js          # Suggestions, paramètres/exclusions, historique
 ├── .github/workflows/deploy.yml                   # CI : déploiement + maintenance PythonAnywhere
 └── Gourmet/                                       # Back (PythonAnywhere)
     ├── app.py              # API Flask (Groq + SQLite)
@@ -129,13 +133,14 @@ Le système repose sur un **moteur hybride dégroupé** où Python joue le rôle
 |---|---|---|
 | `GET` | `/` | Santé du service (`{"status": "ok"}`) |
 | `GET` | `/api/ingredients?q=riz` | Autocomplétion (≥ 2 caractères, 8 résultats max) |
-| `GET` | `/get-ingredients` | Suggestions des roulettes : `bases`, `proteins`, `vegetables` |
 | `POST` | `/generate-ideas` | Phase 1 : renvoie `{"ideas": [{"title", "description"}]}` (3 idées) |
 | `POST` | `/generate-recipe` | Phase 2 : renvoie les 4 variantes `original`, `healthy`, `protein`, `gourmand` |
+| `POST` | `/adjust-recipe` | `{instruction, variant_key, recipe, equipment, exclusions}` → `{"recipe": …}` (version modifiée selon une phrase) |
+| `POST` | `/regenerate-variant` | `{variant_key, idea_title, previous_title, base_recipe, equipment, exclusions}` → `{"recipe": …}` (nouvelle version différente de la précédente) |
 
-Les deux routes `POST` acceptent le même corps JSON : `simple_prompt`, `ingredients`, `equipment`, `fusion`, `risk`, `time`, `dish_type` (Salé/Sucré), `diet_profile`, `cooking_style`, `chef_instruction_directive`, et `selected_idea` pour `/generate-recipe`. `/generate-ideas` accepte en plus `avoid_titles` (liste de titres déjà proposés, 12 maximum). Le « moment du repas » (Entrée/Plat/Dessert) voyage dans `chef_instruction_directive`.
+Les deux routes `POST` acceptent le même corps JSON : `simple_prompt`, `ingredients`, `equipment`, `fusion`, `risk`, `time`, `dish_type` (Salé/Sucré), `diet_profile`, `cooking_style`, `chef_instruction_directive`, et `selected_idea` pour `/generate-recipe`. `/generate-ideas` accepte en plus `avoid_titles` (liste de titres déjà proposés, 12 maximum). Toutes les routes de génération acceptent `exclusions` : `{allergies, dislikes, likes, allergy_rules}` (`allergy_rules` : mots-clés par allergène, pour la vérification serveur). Le « moment du repas » (Entrée/Plat/Dessert) voyage dans `chef_instruction_directive`.
 
-**Limites :** 10 requêtes de génération par minute et par IP (`RATE_LIMIT_PER_MIN`), réponse `429` au-delà. En cas d'échec du LLM, `/generate-recipe` renvoie un code `500` avec une structure de secours que le front sait afficher.
+**Modèle :** `openai/gpt-oss-120b` par défaut (variable `GROQ_MODEL` du `.env` pour en changer). Si l'IA échoue ou répond hors format, `/generate-recipe` et `/generate-ideas` renvoient `500` `{"error": ...}` et le site propose de réessayer. Pas de limite de requêtes côté serveur : la limite Groq de ton compte s'applique.
 
 ---
 
@@ -149,7 +154,7 @@ cp .env.example .env        # puis renseigner GROQ_API_KEY
 python app.py               # API sur http://127.0.0.1:5000
 ```
 
-Pour le front, servir le dossier racine (`python -m http.server 5500`) et pointer `BACKEND_URL` (en haut de `inventory.js`) vers `http://127.0.0.1:5000`. L'origine `http://localhost:5500` est autorisée par défaut ; d'autres s'ajoutent via `ALLOWED_ORIGINS`. Pour tester depuis un smartphone du réseau local : `HOST=0.0.0.0 python app.py`.
+Pour le front, servir le dossier racine (`python -m http.server 5500`) et pointer `BACKEND_URL` (en haut de `inventory.js`) vers `http://127.0.0.1:5000`. Le serveur accepte toutes les origines (CORS ouvert).
 
 `python database.py` reconstruit la base depuis la liste d'ingrédients du script (optionnel : `legourmet.db` est déjà fourni).
 
@@ -182,3 +187,11 @@ Ce projet est distribué sous la licence [PolyForm Noncommercial 1.0.0](LICENSE)
 
 **Usage commercial : contacte-moi pour une licence séparée** — [Funappi](https://github.com/funappi).
 
+
+
+## Étape 2 : menu, planning, liste de courses
+Un seul plat est généré à la fois (ménage le quota du plan gratuit de Groq).
+- **Menu** : coche 2 ou 3 services (Entrée / Plat / Dessert). Le premier plat s'affiche, puis « Plat suivant » génère le suivant. « Autre plat » en propose un autre pour le service affiché.
+- **Planning** (bouton « Planning » en haut) : jours, midi/soir, services, personnes, variété. Le premier repas est généré ; les autres, listés à droite, se génèrent au clic. Case « je n'aime pas » + « Remplacer la sélection » : les plats cochés sont vidés et jamais reproposés.
+- **Liste de courses** : ingrédients fusionnés par rayon, « j'ai déjà », garde-manger mémorisé (`lg_pantry`), copier / partager.
+- **Backend** : route `POST /generate-meal` (un plat) dans `Gourmet/app.py` ; recoller le fichier sur PythonAnywhere puis Reload.
