@@ -737,3 +737,7 @@ body.no-scroll { overflow: hidden; }
 .cook-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .cook-awake { text-align: center; font-size: 0.75rem; color: var(--text-muted); }
 @media (prefers-reduced-motion: reduce) { .cook-timer.is-done { animation: none; } .cook-progress-fill { transition: none; } }
+
+.cook-timer.is-link { cursor: pointer; }
+.cook-timer.is-link:hover { border-color: var(--accent); }
+.cook-timer.is-link .cook-timer-name::before { content: "↩ "; color: var(--accent); }

@@ -9,6 +9,9 @@ const Cooking = (() => {
     let wakeLock = null;
     let timers = [];          // { id, label, end, total, done }
     let tick = null, audio = null, timerSeq = 0;
+    // Deux présentations des minuteurs à comparer : « step » = « Étape 3 · 1 h 30 » et un clic ramène à l'étape ;
+    // « action » = « Mijotage · 1 h 30 » (nom de l'action).
+    const timerStyle = () => { try { return localStorage.getItem('lg_timer_style') === 'action' ? 'action' : 'step'; } catch (e) { return 'step'; } };
 
     // ---------- repérage des durées dans une phrase ----------
     // Renvoie [{ start, end, seconds, label }] ; gère « 1 h 30 », « 10 à 12 minutes », « 45 secondes ».
@@ -30,6 +33,33 @@ const Cooking = (() => {
             }
         });
         return found.sort((a, b) => a.start - b.start);
+    }
+
+    // Nom court de l'action autour d'une durée : « Mijotage », « Frigo », « Cuisson »… (le plus précis d'abord)
+    const ACTIONS = [
+        [/cong[ée]lateur/i, "Congélateur"], [/r[ée]frig[ée]rateur|frigo|au frais|bac à légumes/i, "Frigo"],
+        [/mariner|marinade|faire mariner/i, "Marinade"], [/reposer|repos|laisser reposer|reposez/i, "Repos"],
+        [/lever|pousse|doubler de volume/i, "Pousse"], [/infus/i, "Infusion"], [/tremper|trempage|faire gonfler|gonfler/i, "Trempage"],
+        [/mijot/i, "Mijotage"], [/bouill|ébullition|ebullition|eau frémissante|pocher/i, "Ébullition"],
+        [/faire revenir|revenir|saisir|dorer|colorer/i, "Revenir"], [/griller|grill|barbecue/i, "Grillade"],
+        [/four|enfourn|cuire|cuisson|rôtir|rotir|gratiner|vapeur/i, "Cuisson"], [/fouett|battre|mélanger|melanger|pétrir|petrir/i, "Mélange"],
+        [/refroidir|tiédir|tiedir/i, "Refroidissement"]
+    ];
+    function actionLabel(text, start, end) {
+        const near = text.slice(Math.max(0, start - 80), end + 30);
+        const before = text.slice(0, start);
+        // on préfère ce qui est le plus proche avant la durée ; sinon on cherche dans la phrase élargie
+        let best = null;
+        ACTIONS.forEach(([re, name]) => {
+            const g = new RegExp(re.source, "gi");
+            let m, last = -1;
+            while ((m = g.exec(near))) last = m.index;
+            if (last >= 0) {
+                const dist = Math.abs((start - Math.max(0, start - 80)) - last);
+                if (!best || dist < best.dist) best = { name, dist };
+            }
+        });
+        return best ? best.name : (before.trim() ? "Minuteur" : "Minuteur");
     }
 
     const fmt = (s) => {
@@ -71,10 +101,11 @@ const Cooking = (() => {
         try { navigator.vibrate?.([300, 150, 300, 150, 300]); } catch (e) {}
     }
 
-    function startTimer(seconds, label) {
+    function startTimer(seconds, durationLabel, action) {
         // le son doit être « débloqué » par un geste : on crée le contexte audio au clic
         try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); } catch (e) {}
-        timers.push({ id: ++timerSeq, label, end: Date.now() + seconds * 1000, total: seconds, done: false });
+        const label = timerStyle() === 'action' ? `${action} · ${durationLabel}` : `Étape ${index + 1} · ${durationLabel}`;
+        timers.push({ id: ++timerSeq, step: index, label, end: Date.now() + seconds * 1000, total: seconds, done: false });
         if (!tick) tick = setInterval(update, 500);
         update();
     }
@@ -102,7 +133,14 @@ const Cooking = (() => {
                 const time = document.createElement("span"); time.className = "cook-timer-time";
                 const stop = document.createElement("button"); stop.type = "button"; stop.className = "cook-timer-stop";
                 stop.textContent = "✕"; stop.setAttribute("aria-label", `Arrêter le minuteur : ${t.label}`);
-                stop.addEventListener("click", () => { timers = timers.filter(x => x.id !== t.id); renderTimers(); });
+                stop.addEventListener("click", (e) => { e.stopPropagation(); timers = timers.filter(x => x.id !== t.id); renderTimers(); });
+                if (timerStyle() === 'step') {
+                    el.classList.add("is-link"); el.tabIndex = 0; el.setAttribute("role", "button");
+                    el.title = "Revenir à cette étape";
+                    const jump = () => { index = t.step; renderStep(); };
+                    el.addEventListener("click", jump);
+                    el.addEventListener("keydown", (e) => { if (e.key === "Enter") jump(); });
+                }
                 el.append(name, time, stop);
                 box.appendChild(el);
             }
@@ -128,7 +166,8 @@ const Cooking = (() => {
             b.type = "button"; b.className = "cook-timer-link";
             b.textContent = `⏱ ${d.label}`;
             b.title = "Lancer un minuteur";
-            b.addEventListener("click", () => startTimer(d.seconds, `Étape ${index + 1} · ${d.label}`));
+            const action = actionLabel(text, d.start, d.end);
+            b.addEventListener("click", () => startTimer(d.seconds, d.label, action));
             target.appendChild(b);
             last = d.end;
         });
@@ -217,5 +256,5 @@ const Cooking = (() => {
         }, { passive: true });
     }
 
-    return { init, open, close, findDurations, isOpen };
+    return { init, open, close, findDurations, actionLabel, isOpen };
 })();
