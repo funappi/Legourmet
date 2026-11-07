@@ -17,12 +17,12 @@ const Planning = (() => {
         cells: Object.fromEntries([0, 1, 2, 3, 4].map(d => [`${d}-soir`, ["Plat"]]))
     });
 
-    let plan = { version: 1, config: defaultConfig(), meals: [] };   // meals: [{ key, day, slot, course, pack|null }]
+    let plan = { version: 1, config: defaultConfig(), meals: [], rejected: [] };   // meals: [{ key, day, slot, course, pack|null, context }]
 
     function load() {
         try {
             const raw = JSON.parse(localStorage.getItem(KEY) || "null");
-            if (raw && raw.version === 1 && raw.config && Array.isArray(raw.meals)) plan = raw;
+            if (raw && raw.version === 1 && raw.config && Array.isArray(raw.meals)) plan = { rejected: [], ...raw };
         } catch (e) {}
         if (!plan.config.persons) plan.config.persons = (typeof Settings !== "undefined" ? Settings.defaultPortions() : 2);
     }
@@ -102,157 +102,131 @@ const Planning = (() => {
         $("plan-estimate").textContent = n > 10 ? `Environ ${Math.ceil(n * 7 / 60)} min d'attente : tu peux annuler à tout moment, ce qui est prêt est gardé.` : "";
     }
 
-    // ---------- affichage du planning ----------
-    function mealsFor(day, slot) { return plan.meals.filter(m => m.day === day && m.slot === slot); }
+    // ---------- liste à droite (panneau « Mon planning ») ----------
+    let currentKey = null;
+    const checked = new Set();   // clés cochées « je n'aime pas »
 
-    function renderResult() {
-        const box = $("plan-result");
-        box.innerHTML = "";
-        const hasMeals = plan.meals.length > 0;
-        $("plan-setup").classList.toggle("hidden-mode", hasMeals && !setupOpen);
-        $("plan-result-wrap").classList.toggle("hidden-mode", !hasMeals);
-        if (!hasMeals) return;
+    const titleOf = (m) => m.pack?.original?.title || "";
+
+    function renderSide() {
+        const side = $("planSide");
+        if (!side) return;
+        const has = plan.meals.length > 0;
+        side.classList.toggle("hidden-mode", !has || !sideVisible);
+        document.body.classList.toggle("has-plan-side", has && sideVisible);
+        if (!has || !sideVisible) return;
         const done = plan.meals.filter(m => m.pack).length;
-        $("plan-summary").textContent = `${done} recette${done > 1 ? "s" : ""} · ${plan.config.persons} personne${plan.config.persons > 1 ? "s" : ""}`;
-        $("plan-shopping-btn").disabled = done === 0;
+        $("plan-side-summary").textContent = `${done} plat${done > 1 ? "s" : ""} prêt${done > 1 ? "s" : ""} sur ${plan.meals.length} · ${plan.config.persons} pers. Clique un repas pour le générer.`;
 
+        const list = $("plan-side-list");
+        list.innerHTML = "";
         const days = [...new Set(plan.meals.map(m => m.day))].sort((a, b) => a - b);
         days.forEach(d => {
-            const card = document.createElement("article");
-            card.className = "plan-day-card";
-            const h = document.createElement("h4"); h.textContent = DAYS[d]; card.appendChild(h);
-            SLOTS.forEach(s => {
-                const meals = mealsFor(d, s.id).sort((a, b) => COURSES.indexOf(a.course) - COURSES.indexOf(b.course));
-                if (!meals.length) return;
-                const slotBox = document.createElement("div"); slotBox.className = "plan-slot";
-                const lab = document.createElement("div"); lab.className = "plan-slot-label"; lab.textContent = `${s.icon} ${s.label}`;
-                slotBox.appendChild(lab);
-                meals.forEach(m => slotBox.appendChild(mealRow(m)));
-                card.appendChild(slotBox);
+            const group = document.createElement("div"); group.className = "plan-side-day";
+            const h = document.createElement("h4"); h.textContent = DAYS[d]; group.appendChild(h);
+            plan.meals.filter(m => m.day === d).sort((a, b) => SLOTS.findIndex(s => s.id === a.slot) - SLOTS.findIndex(s => s.id === b.slot) || COURSES.indexOf(a.course) - COURSES.indexOf(b.course)).forEach(m => {
+                const row = document.createElement("div");
+                row.className = "plan-side-meal" + (m.key === currentKey ? " is-current" : "") + (m.pack ? "" : " is-todo");
+                const box = document.createElement("input");
+                box.type = "checkbox"; box.className = "plan-dislike";
+                box.disabled = !m.pack; box.checked = checked.has(m.key);
+                box.title = "Je n'aime pas ce plat : à remplacer";
+                box.setAttribute("aria-label", `Je n'aime pas : ${titleOf(m) || m.course}`);
+                box.addEventListener("change", () => { if (box.checked) checked.add(m.key); else checked.delete(m.key); updateReplaceBtn(); });
+                const btn = document.createElement("button");
+                btn.type = "button"; btn.className = "plan-side-open";
+                const meta = document.createElement("span"); meta.className = "plan-side-meta";
+                meta.textContent = `${SLOTS.find(s => s.id === m.slot).icon} ${ICON[m.course]}`;
+                const t = document.createElement("span"); t.className = "plan-side-title";
+                t.textContent = titleOf(m) || "À générer";
+                btn.append(meta, t);
+                btn.addEventListener("click", () => openMeal(m));
+                row.append(box, btn);
+                group.appendChild(row);
             });
-            box.appendChild(card);
+            list.appendChild(group);
         });
+        updateReplaceBtn();
+        $("plan-shopping-btn").disabled = done === 0;
     }
 
-    function mealRow(m) {
-        const row = document.createElement("div");
-        row.className = "plan-meal" + (m.pack ? "" : " is-empty");
-        const open = document.createElement("button");
-        open.type = "button"; open.className = "plan-meal-open";
-        const course = document.createElement("span"); course.className = "plan-meal-course"; course.textContent = ICON[m.course];
-        course.title = m.course;
-        const title = document.createElement("span"); title.className = "plan-meal-title";
-        title.textContent = m.pack ? m.pack.original.title : `${m.course} : pas encore généré`;
-        open.append(course, title);
-        if (m.pack) open.addEventListener("click", () => openMeal(m));
-        else open.addEventListener("click", () => regenerate(m));
-        const redo = document.createElement("button");
-        redo.type = "button"; redo.className = "plan-meal-redo";
-        redo.textContent = m.pack ? "🔄" : "✨";
-        redo.title = m.pack ? "Proposer un autre plat" : "Générer";
-        redo.setAttribute("aria-label", `${m.pack ? "Changer" : "Générer"} : ${m.course}, ${slotLabel(m.day, m.slot)}`);
-        redo.addEventListener("click", () => regenerate(m));
-        row.append(open, redo);
-        return row;
+    function updateReplaceBtn() {
+        const n = checked.size;
+        const btn = $("plan-replace-btn");
+        if (!btn) return;
+        btn.disabled = n === 0;
+        btn.textContent = n ? `Remplacer la sélection (${n})` : "Coche les plats à remplacer";
     }
 
-    // ---------- génération ----------
-    function baseRequest(meal, titlesToAvoid) {
-        const payload = LG.buildPayload(meal.course);
-        payload.selected_idea = undefined;
-        payload.course = meal.course;
-        payload.slot = slotLabel(meal.day, meal.slot);
-        payload.vary = !!plan.config.vary;
-        payload.avoid_titles = titlesToAvoid.slice(-24);
-        // Pas d'« inspiration » ni d'ingrédients imposés du panneau : le planning varie les plats. On garde matériel, niveau, régime et exclusions.
-        payload.chef_instruction_directive = Settings.directivePrefix() + Settings.softPrefsLine(true);
-        return payload;
-    }
+    let sideVisible = false;
+    function showSide(on) { sideVisible = on; renderSide(); }
 
-    const allTitles = () => plan.meals.filter(m => m.pack).map(m => m.pack.original.title);
+    // ---------- génération : UN plat à la fois ----------
+    const allTitles = () => [...plan.meals.filter(m => m.pack).map(titleOf), ...(plan.rejected || [])];
 
-    async function generateMeal(meal, progress) {
-        const data = await LG.apiRequest("generate-meal", baseRequest(meal, allTitles()), {
-            step: 0, art: true, keepLoader: true, progress,
-            title: "Le chef compose votre semaine…",
-            validate: d => LG.isValidVariant(d?.recipe)
+    async function generateMeal(meal) {
+        const result = await LG.generateMeal({
+            course: meal.course,
+            slot: slotLabel(meal.day, meal.slot),
+            avoid: allTitles(),
+            vary: !!plan.config.vary,
+            title: `Le chef prépare : ${slotLabel(meal.day, meal.slot)}…`
         });
-        if (!data) return false;
-        meal.pack = { original: data.recipe };
-        meal.context = { hardware: window.currentHardware, complex: window.currentComplex, risk: window.currentRisk, course: meal.course };
+        LG.Loader.hide();
+        if (!result) return false;
+        meal.pack = result.pack; meal.context = result.context;
         save();
         return true;
     }
 
-    async function generateAll() {
+    // Ouvre un repas ; s'il n'est pas encore généré, on le génère d'abord (1 appel)
+    async function openMeal(meal) {
         if (LG.busy()) return;
-        // Nouveau planning : on remplace la liste en gardant les repas déjà générés qui sont toujours voulus
+        if (!meal.pack) {
+            LG.setBusy(true);
+            try { if (!(await generateMeal(meal))) { renderSide(); return; } } finally { LG.setBusy(false); }
+        }
+        currentKey = meal.key;
+        const historyId = LG.RecipeHistory.add({ pack: meal.pack, context: meal.context || null });
+        LG.openRecipePack({ pack: meal.pack, context: meal.context || null, historyId, fromPlan: true });
+        LG.setPortions(plan.config.persons);
+        sideVisible = true;
+        renderSide();
+    }
+
+    function startPlan() {
         const wanted = wantedMeals();
         const previous = new Map(plan.meals.map(m => [mealKey(m.day, m.slot, m.course), m]));
-        plan.meals = wanted.map(w => previous.get(mealKey(w.day, w.slot, w.course)) || { ...w, pack: null });
+        plan.meals = wanted.map(w => ({ key: mealKey(w.day, w.slot, w.course), ...(previous.get(mealKey(w.day, w.slot, w.course)) || { ...w, pack: null }) }));
+        checked.clear();
         save();
-        const todo = plan.meals.filter(m => !m.pack);
-        setupOpen = false;
-        if (!todo.length) { renderResult(); return; }
-
-        LG.setBusy(true);
-        try {
-            for (let i = 0; i < todo.length; i++) {
-                const m = todo[i];
-                const ok = await generateMeal(m, { label: `${ICON[m.course]} ${slotLabel(m.day, m.slot)} · ${i + 1} sur ${todo.length}`, value: i / todo.length });
-                renderResult();
-                if (!ok) break;
-            }
-        } finally {
-            LG.Loader.hide();
-            LG.setBusy(false);
-            renderResult();
-        }
-    }
-
-    async function regenerate(meal) {
-        if (LG.busy()) return;
-        LG.setBusy(true);
-        try {
-            const keep = meal.pack;
-            const avoid = allTitles();
-            const data = await LG.apiRequest("generate-meal", baseRequest(meal, avoid), {
-                step: 0, art: false, title: "Le chef cherche une autre idée…",
-                validate: d => LG.isValidVariant(d?.recipe)
-            });
-            if (data) {
-                meal.pack = { original: data.recipe };
-                meal.context = { hardware: window.currentHardware, complex: window.currentComplex, risk: window.currentRisk, course: meal.course };
-                save();
-            } else meal.pack = keep;
-        } finally {
-            LG.setBusy(false);
-            renderResult();
-        }
-    }
-
-    // ---------- ouvrir une recette du planning ----------
-    let openedMeal = null;
-    function openMeal(meal) {
-        const historyId = LG.RecipeHistory.add({ pack: meal.pack, context: meal.context || null });
-        openedMeal = meal;
         close();
-        LG.openRecipePack({ pack: meal.pack, context: meal.context || null, historyId, fromPlan: true });
-        showBack(true);
+        const first = plan.meals.find(m => !m.pack) || plan.meals[0];
+        openMeal(first);
     }
-    function showBack(on) { $("planBackBar")?.classList.toggle("hidden-mode", !on); if (!on) openedMeal = null; }
+
+    // Les plats cochés sont vidés (leurs titres ne seront plus reproposés) ; le premier est régénéré tout de suite
+    function replaceChecked() {
+        const targets = plan.meals.filter(m => checked.has(m.key));
+        if (!targets.length) return;
+        targets.forEach(m => { if (m.pack) plan.rejected.push(titleOf(m)); m.pack = null; m.context = null; });
+        plan.rejected = [...new Set(plan.rejected)].slice(-40);
+        checked.clear();
+        save();
+        renderSide();
+        openMeal(targets[0]);
+    }
 
     function shoppingRecipes() {
-        return plan.meals.filter(m => m.pack).map(m => ({ title: m.pack.original.title, recipe: m.pack.original, persons: plan.config.persons }));
+        return plan.meals.filter(m => m.pack).map(m => ({ title: titleOf(m), recipe: m.pack.original, persons: plan.config.persons }));
     }
 
-    // ---------- fenêtre ----------
-    let setupOpen = true;
+    // ---------- fenêtre de réglage ----------
     function open() {
         load();
-        setupOpen = plan.meals.length === 0;
         renderSetup();
-        renderResult();
+        const has = plan.meals.length > 0;
+        $("plan-resume").classList.toggle("hidden-mode", !has);
         $("planning-page").classList.remove("hidden-mode");
         document.body.classList.add("no-scroll");
         $("plan-close-btn")?.focus();
@@ -276,26 +250,37 @@ const Planning = (() => {
         $("plan-days-plus")?.addEventListener("click", () => {
             const before = plan.config.days;
             bump("days", 1, 1, 7);
-            // un jour ajouté démarre avec le soir (pratique) tant que rien n'est choisi pour lui
             if (plan.config.days > before && !SLOTS.some(s => (plan.config.cells[`${before}-${s.id}`] || []).length)) { plan.config.cells[`${before}-soir`] = ["Plat"]; renderSetup(); }
         });
         $("plan-persons-minus")?.addEventListener("click", () => bump("persons", -1, 1, 12));
         $("plan-persons-plus")?.addEventListener("click", () => bump("persons", 1, 1, 12));
         $("plan-vary")?.addEventListener("change", (e) => { plan.config.vary = e.target.checked; });
-        $("plan-generate-btn")?.addEventListener("click", generateAll);
-        $("plan-edit-btn")?.addEventListener("click", () => { setupOpen = true; renderSetup(); renderResult(); $("plan-setup").scrollIntoView({ behavior: "smooth", block: "start" }); });
+        $("plan-generate-btn")?.addEventListener("click", () => { if (!LG.busy()) startPlan(); });
+        $("plan-resume-btn")?.addEventListener("click", () => {
+            close();
+            const target = plan.meals.find(m => m.key === currentKey && m.pack) || plan.meals.find(m => m.pack) || plan.meals[0];
+            openMeal(target);
+        });
+        $("plan-edit-btn")?.addEventListener("click", open);
         $("plan-clear-btn")?.addEventListener("click", () => {
             if (!confirm("Effacer ce planning et recommencer ?")) return;
-            plan.meals = []; save(); setupOpen = true; renderSetup(); renderResult();
+            plan.meals = []; plan.rejected = []; checked.clear(); currentKey = null; save(); showSide(false);
+            $("plan-resume").classList.add("hidden-mode");
         });
+        $("plan-replace-btn")?.addEventListener("click", replaceChecked);
         $("plan-shopping-btn")?.addEventListener("click", () => {
             const recipes = shoppingRecipes();
-            Shopping.open({ title: "Courses de la semaine", subtitle: `${recipes.length} recettes · ${plan.config.persons} personne${plan.config.persons > 1 ? "s" : ""}`, recipes });
+            const total = plan.meals.length;
+            Shopping.open({ title: "Courses de la semaine", subtitle: `${recipes.length} plat${recipes.length > 1 ? "s" : ""} détaillé${recipes.length > 1 ? "s" : ""} sur ${total} · ${plan.config.persons} personne${plan.config.persons > 1 ? "s" : ""}`, recipes });
         });
-        $("planBackBtn")?.addEventListener("click", () => { showBack(false); open(); });
-        // Une version ajustée / ajoutée sur une recette du planning : on enregistre
+        $("plan-side-toggle")?.addEventListener("click", (e) => {
+            const list = $("planSide");
+            const collapsed = list.classList.toggle("is-collapsed");
+            e.currentTarget.setAttribute("aria-expanded", String(!collapsed));
+            e.currentTarget.textContent = collapsed ? "▸" : "▾";
+        });
         window.addEventListener("lg:pack-changed", () => { if (plan.meals.some(m => m.pack === LG.activePack())) save(); });
     }
 
-    return { init, open, close, hideBack: () => showBack(false) };
+    return { init, open, close, hideSide: () => showSide(false) };
 })();

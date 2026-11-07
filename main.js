@@ -287,7 +287,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Ouvre une recette (nouvelle génération, favori ou historique) dans la fiche
     function openRecipePack({ pack, context = null, historyId = null, keepMenu = false, fromPlan = false }) {
         if (!keepMenu) Menu.hideTabs();
-        if (!fromPlan) Planning.hideBack();
+        if (!fromPlan) Planning.hideSide();
         AppState.activeRecipePack = pack;
         AppState.activeRecipeContext = context;
         AppState.activeHistoryId = historyId;
@@ -1090,6 +1090,17 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- 10bis. PONT pour les modules Menu / Planning / Courses ---
     const LG = {
         buildPayload, apiRequest, openRecipePack, isValidVariant, Loader, RecipeHistory,
+        // Un seul plat généré à la fois (planning, menu) : ménage le quota du plan gratuit.
+        async generateMeal({ course, slot = "", avoid = [], menuTitles = [], vary = true, inspiration = "", title }) {
+            const p = buildPayload(course);
+            p.course = course; p.slot = slot; p.vary = vary; p.inspiration = inspiration;
+            p.avoid_titles = avoid.slice(-30); p.menu_titles = menuTitles;
+            p.chef_instruction_directive = Settings.directivePrefix() + Settings.softPrefsLine(true);
+            const data = await apiRequest('generate-meal', p, { step: 0, art: true, title, validate: d => isValidVariant(d?.recipe) });
+            if (!data) return null;
+            return { pack: { original: data.recipe }, context: { hardware: window.currentHardware, complex: window.currentComplex, risk: window.currentRisk, course } };
+        },
+        setPortions: (n) => { AppState.currentPortions = n; DOM.get("portion-display").innerText = String(n); if (AppState.activeRecipePack) window.renderSelectedVariant(AppState.currentSelectedVariant); },
         busy: () => requestInFlight,
         setBusy: (v) => { requestInFlight = !!v; },
         portions: () => AppState.currentPortions,

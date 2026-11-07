@@ -657,3 +657,37 @@ body.no-scroll { overflow: hidden; }
 
 .planning-inner > .planning-header { flex-direction: row; align-items: center; justify-content: space-between; text-align: left; margin: 0; padding: 4px 0 0; }
 .planning-header h2 { margin: 0; }
+
+/* --- Mon planning : liste à droite de la fiche --- */
+.plan-side { background: var(--card-bg); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 850px; margin-bottom: 14px; box-shadow: 0 10px 30px var(--shadow-color); }
+.plan-side-head { display: flex; align-items: center; justify-content: space-between; }
+.plan-side-head h3 { font-size: 0.95rem; }
+.plan-side-toggle { border: none; background: transparent; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; padding: 4px 8px; }
+.plan-side-summary { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
+.plan-side-list { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.plan-side-day h4 { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+.plan-side-meal { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.plan-dislike { flex: none; width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.plan-dislike:disabled { opacity: 0.25; cursor: not-allowed; }
+.plan-side-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; text-align: left; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--element-bg); color: var(--text-light); font: inherit; font-size: 0.82rem; cursor: pointer; transition: 0.15s; }
+.plan-side-open:hover { border-color: var(--accent); }
+.plan-side-meal.is-current .plan-side-open { border-color: var(--accent); background: rgba(244, 63, 94, 0.1); }
+.plan-side-meal.is-todo .plan-side-open { border-style: dashed; color: var(--text-muted); }
+.plan-side-meta { flex: none; font-size: 0.8rem; }
+.plan-side-title { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
+.plan-side-actions { display: flex; flex-direction: column; gap: 8px; }
+.plan-side-row { display: flex; gap: 8px; }
+.plan-side-row .btn-shop-main { flex: 1; }
+.plan-replace-btn { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--accent); background: rgba(244, 63, 94, 0.1); color: var(--accent); font-weight: 600; font-size: 0.82rem; cursor: pointer; }
+.plan-replace-btn:disabled { border-color: var(--border-glass); background: transparent; color: var(--text-muted); cursor: default; font-weight: 500; }
+.plan-side.is-collapsed .plan-side-list, .plan-side.is-collapsed .plan-side-actions, .plan-side.is-collapsed .plan-side-summary { display: none; }
+.plan-resume { display: flex; gap: 8px; flex-wrap: wrap; }
+.course-tabs-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn-next { padding: 8px 16px; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #ff7eb3); color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 12px var(--accent-glow); }
+.course-tab.is-todo { border-style: dashed; }
+.course-tab.is-todo .course-tab-title { color: var(--text-muted); font-weight: 500; }
+
+@media (min-width: 1180px) {
+    body.has-plan-side .result-panel { padding-right: 330px; }
+    body.has-plan-side .plan-side { position: fixed; right: 20px; top: 20px; width: 290px; max-height: calc(100vh - 40px); margin: 0; z-index: 50; }
+}

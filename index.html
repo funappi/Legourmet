@@ -181,12 +181,28 @@
 
         <main class="result-panel">
             
-            <div id="planBackBar" class="plan-back-bar hidden-mode">
-                <button type="button" id="planBackBtn" class="control-btn">← Retour au planning</button>
-            </div>
+            <aside id="planSide" class="plan-side hidden-mode" aria-label="Mon planning">
+                <div class="plan-side-head">
+                    <h3>📅 Mon planning</h3>
+                    <button type="button" id="plan-side-toggle" class="plan-side-toggle" aria-expanded="true" aria-label="Replier la liste">▾</button>
+                </div>
+                <p id="plan-side-summary" class="plan-side-summary"></p>
+                <div id="plan-side-list" class="plan-side-list"></div>
+                <div class="plan-side-actions">
+                    <button type="button" id="plan-replace-btn" class="plan-replace-btn" disabled>Remplacer la sélection</button>
+                    <div class="plan-side-row">
+                        <button type="button" id="plan-shopping-btn" class="btn-shop-main">🛒 Courses</button>
+                        <button type="button" id="plan-edit-btn" class="control-btn">Réglages</button>
+                    </div>
+                </div>
+            </aside>
             <div id="courseTabsZone" class="course-tabs-zone hidden-mode">
                 <div id="courseTabs" class="course-tabs" role="group" aria-label="Plats du menu"></div>
-                <button type="button" id="menu-shopping-btn" class="control-btn">🛒 Courses du menu</button>
+                <div class="course-tabs-actions">
+                    <button type="button" id="menu-replace-btn" class="control-btn" title="Proposer un autre plat pour ce service">🔄 Autre plat</button>
+                    <button type="button" id="menu-shopping-btn" class="control-btn">🛒 Courses</button>
+                    <button type="button" id="menu-next-btn" class="btn-next hidden-mode">Plat suivant →</button>
+                </div>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 850px; margin-bottom: 15px; gap: 10px;">
@@ -466,18 +482,6 @@
     </div>
 
 
-    <div id="menu-modal-overlay" class="modal-overlay hidden-mode">
-        <div class="ideas-modal glass menu-modal" role="dialog" aria-modal="true" aria-labelledby="menu-title">
-            <div class="modal-header">
-                <h3 id="menu-title">🍽️ Compose ton menu</h3>
-                <button id="menu-close-btn" class="close-modal-btn" aria-label="Fermer">✕</button>
-            </div>
-            <p class="menu-hint">Choisis une idée par service, puis le chef écrit les recettes.</p>
-            <div id="menu-courses" class="menu-courses"></div>
-            <button id="menu-write-btn" class="btn-primary" disabled>Écrire mon menu</button>
-        </div>
-    </div>
-
     <div id="shopping-modal-overlay" class="modal-overlay hidden-mode" style="z-index: 15000;">
         <div class="ideas-modal glass shopping-modal" role="dialog" aria-modal="true" aria-labelledby="shopping-title">
             <div class="modal-header">
@@ -524,20 +528,14 @@
                 <p class="plan-legend">Active les repas voulus, puis choisis 🥗 entrée · 🍽️ plat · 🍰 dessert pour chacun.</p>
                 <div id="plan-grid" class="plan-grid"></div>
                 <button type="button" id="plan-generate-btn" class="btn-primary">Générer le planning</button>
+                <div class="plan-resume hidden-mode" id="plan-resume">
+                    <button type="button" id="plan-resume-btn" class="control-btn">Reprendre mon planning en cours</button>
+                    <button type="button" id="plan-clear-btn" class="control-btn">Effacer le planning</button>
+                </div>
+                <p class="plan-estimate" style="color: var(--text-muted);">Un seul plat est généré à la fois : le premier s'affiche, les autres se génèrent quand tu cliques dessus dans la liste.</p>
                 <p id="plan-estimate" class="plan-estimate"></p>
             </section>
 
-            <section id="plan-result-wrap" class="plan-result-wrap hidden-mode">
-                <div class="plan-result-bar">
-                    <p id="plan-summary" class="plan-summary"></p>
-                    <div class="plan-result-actions">
-                        <button type="button" id="plan-shopping-btn" class="btn-shop-main">🛒 Liste de courses</button>
-                        <button type="button" id="plan-edit-btn" class="control-btn">Modifier</button>
-                        <button type="button" id="plan-clear-btn" class="control-btn">Effacer</button>
-                    </div>
-                </div>
-                <div id="plan-result" class="plan-result"></div>
-            </section>
         </div>
     </div>
 

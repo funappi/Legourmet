@@ -226,7 +226,7 @@ def validate_pack(pack):
             raise ValueError(f"structure invalide pour : {key}")
     return pack
 
-def sanitize_variant(value):
+def sanitize_variant(value, need_steps=True):
     """Nettoie une recette (venant du site ou de l'IA) : types, longueurs, clés attendues par le site."""
     if not isinstance(value, dict):
         raise ValueError("recette non-objet")
@@ -243,7 +243,7 @@ def sanitize_variant(value):
         ingredients.append({"name": clean(item["name"], 80), "qty": qty, "unit": clean(item.get("unit", ""), 20)})
     raw_steps = value.get("steps")
     steps = [clean(x, 500) for x in (raw_steps if isinstance(raw_steps, list) else [])[:30] if isinstance(x, str) and x.strip()]
-    if not ingredients or not steps:
+    if not ingredients or (need_steps and not steps):
         raise ValueError("structure invalide")
     macros = value.get("macros") if isinstance(value.get("macros"), dict) else {}
     try:
@@ -501,14 +501,13 @@ def regenerate_variant():
 
 @app.route('/generate-meal', methods=['POST'])
 def generate_meal():
-    """Planning : UNE recette (version Original) pour un repas précis. Les autres versions se demandent ensuite à la carte."""
+    """UN seul plat (version Original) pour un repas du planning ou un service d'un menu.
+    Une seule génération à la fois : ménage le quota du plan gratuit de Groq. Les autres versions se demandent à la carte."""
     data = request.get_json(silent=True) or {}
-    course = clean(data.get("course", "Plat"), 20)
-    if course not in ("Entrée", "Plat", "Dessert"):
-        course = "Plat"
-    dish_type = "Sucré" if course == "Dessert" else "Salé"
+    course = data.get("course") if data.get("course") in ("Entrée", "Plat", "Dessert") else "Plat"
     slot = clean(data.get("slot", ""), 40)
-    avoid = _clean_list(data.get("avoid_titles"), 40, 90)
+    avoid = _clean_list(data.get("avoid_titles"), 60, 90)
+    menu_titles = _clean_list(data.get("menu_titles"), 4, 90)
     equipment = data.get("equipment", [])
     equip_clause = f"Matériel EXCLUSIF : {', '.join(clean(e, 40) for e in equipment[:10])}." if isinstance(equipment, list) and equipment and "Auto_FoodPairing" not in equipment else "Matériel : Libre."
     briefs = {
@@ -519,14 +518,20 @@ def generate_meal():
     diet = clean(data.get("diet_profile", "Aucun"), 40)
     time_level = clean(data.get("time", "Amateur"), 30)
     vary = bool(data.get("vary", True))
+    inspiration = clean(data.get("inspiration", ""), 200)
     directive = clean(data.get("chef_instruction_directive", ""), 900)
-    prompt = f"""Tu es un chef de bistronomie qui prépare le planning de la semaine d'une famille. Propose {briefs[course]} pour : {slot or 'un repas'}.
+    context = (
+        f"Tu composes un menu : les autres services sont déjà choisis ({', '.join(menu_titles)}). Ce plat doit s'accorder avec eux sans répéter leur ingrédient principal."
+        if menu_titles else f"Tu prépares le planning de la semaine d'une famille. Repas concerné : {slot or 'un repas'}."
+    )
+    prompt = f"""Tu es un chef de bistronomie. {context} Propose {briefs[course]}.
     RÈGLES :
     - Complexité : {time_level}. {equip_clause}
-    - Type : {dish_type.upper()}.
+    - Type : {"SUCRÉ" if course == "Dessert" else "SALÉ"}.
     {f'- RÉGIME STRICT : {diet}.' if diet != "Aucun" else ''}
-    {'- VARIÉTÉ : change de cuisine, de protéine principale et de technique par rapport aux plats déjà prévus.' if vary else ''}
-    {f"- PLATS DÉJÀ PRÉVUS CETTE SEMAINE, À NE PAS REDONNER NI IMITER : {', '.join(avoid)}." if avoid else ''}
+    {'- VARIÉTÉ : change de cuisine, de protéine principale et de technique par rapport aux plats déjà prévus.' if vary and not menu_titles else ''}
+    {f"- DEMANDE DE L'UTILISATEUR : {inspiration}." if inspiration else ''}
+    {f"- À NE PAS REDONNER NI IMITER (déjà prévus ou refusés) : {', '.join(avoid)}." if avoid else ''}
     {f'- DIRECTIVE DU CHEF : {directive}' if directive else ''}
     - INTERDICTION D'INVENTER DES MOTS : vocabulaire culinaire français strict et existant.
     - Rédige en français, 6 à 9 étapes, quantités pour 1 PERSONNE. N'utilise JAMAIS l'abréviation "u" (écris "pièce"). Unités admises : "g", "mg", "ml", "cl", "c.à.s", "c.à.c", "pincée", "pièce".
