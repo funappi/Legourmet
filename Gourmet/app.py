@@ -20,9 +20,10 @@ CORS(app)
 def surface_llm_errors(resp):
     """Clé API refusée (401) ou quota dépassé (429) : on le dit au site au lieu d'une erreur 500 générique."""
     code = g.get("llm_error")
-    if code and resp.status_code >= 500:
-        msg = "Clé API refusée par Groq." if code == 401 else "Quota Groq atteint."
-        return json_response({"error": msg}, code)
+    detail = g.get("llm_detail")
+    if resp.status_code >= 500 and (code or detail):
+        msg = {401: "Clé API refusée par Groq.", 429: "Quota Groq atteint."}.get(code, "Génération impossible pour le moment.")
+        return json_response({"error": msg, "detail": detail or ""}, code or resp.status_code)
     return resp
 
 GROQ_KEY = os.getenv("GROQ_API_KEY")
@@ -83,6 +84,7 @@ def ask_llm(prompt):
         return json.loads(completion.choices[0].message.content)
     except Exception as e:
         print(f"[ERREUR GROQ BRUTE] : {e}")
+        g.llm_detail = f"{type(e).__name__}: {e}"[:300]
         status = getattr(e, "status_code", None)
         if status in (401, 403):
             g.llm_error = 401
@@ -204,6 +206,7 @@ def ask_llm_checked(prompt, data, extract, parse=lambda r: r):
             return parse(raw)
         except (ValueError, KeyError, TypeError) as e:
             print(f"[RÉPONSE IA INVALIDE] : {e}")
+            g.llm_detail = f"Réponse IA invalide : {e}"[:300]
             return None
 
     result = attempt(prompt)
