@@ -187,3 +187,10 @@ Ce projet est distribué sous la licence [PolyForm Noncommercial 1.0.0](LICENSE)
 
 **Usage commercial : contacte-moi pour une licence séparée** — [Funappi](https://github.com/funappi).
 
+
+
+## Étape 2 : menu, planning, liste de courses
+- **Menu complet** : coche 2 ou 3 services (Entrée / Plat / Dessert), choisis une idée par service, le chef écrit les recettes (onglets par service).
+- **Planning** (bouton « Planning » en haut) : jours, midi/soir, services par repas, nombre de personnes, variété automatique. Une recette « Original » par repas ; les autres versions se génèrent à la demande. Sauvegardé dans le navigateur (`lg_plan`).
+- **Liste de courses** : ingrédients fusionnés, rangés par rayon, « j'ai déjà », garde-manger mémorisé (`lg_pantry`), copier / partager.
+- **Backend** : nouvelle route `POST /generate-meal` dans `Gourmet/app.py` (à recoller sur PythonAnywhere, puis Reload).

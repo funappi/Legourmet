@@ -490,5 +490,45 @@ def regenerate_variant():
     result = ask_llm_checked(prompt, data, extract=lambda r: [r], parse=sanitize_variant)
     return json_response({"recipe": result}) if result else json_response({"error": "Régénération impossible pour le moment."}, 500)
 
+@app.route('/generate-meal', methods=['POST'])
+def generate_meal():
+    """Planning : UNE recette (version Original) pour un repas précis. Les autres versions se demandent ensuite à la carte."""
+    data = request.get_json(silent=True) or {}
+    course = clean(data.get("course", "Plat"), 20)
+    if course not in ("Entrée", "Plat", "Dessert"):
+        course = "Plat"
+    dish_type = "Sucré" if course == "Dessert" else "Salé"
+    slot = clean(data.get("slot", ""), 40)
+    avoid = _clean_list(data.get("avoid_titles"), 40, 90)
+    equipment = data.get("equipment", [])
+    equip_clause = f"Matériel EXCLUSIF : {', '.join(clean(e, 40) for e in equipment[:10])}." if isinstance(equipment, list) and equipment and "Auto_FoodPairing" not in equipment else "Matériel : Libre."
+    briefs = {
+        "Entrée": "une entrée légère et raffinée qui ouvre le repas (jamais un plat principal)",
+        "Plat": "un plat principal complet et rassasiant",
+        "Dessert": "un dessert (domaine sucré uniquement)",
+    }
+    diet = clean(data.get("diet_profile", "Aucun"), 40)
+    time_level = clean(data.get("time", "Amateur"), 30)
+    vary = bool(data.get("vary", True))
+    directive = clean(data.get("chef_instruction_directive", ""), 900)
+    prompt = f"""Tu es un chef de bistronomie qui prépare le planning de la semaine d'une famille. Propose {briefs[course]} pour : {slot or 'un repas'}.
+    RÈGLES :
+    - Complexité : {time_level}. {equip_clause}
+    - Type : {dish_type.upper()}.
+    {f'- RÉGIME STRICT : {diet}.' if diet != "Aucun" else ''}
+    {'- VARIÉTÉ : change de cuisine, de protéine principale et de technique par rapport aux plats déjà prévus.' if vary else ''}
+    {f"- PLATS DÉJÀ PRÉVUS CETTE SEMAINE, À NE PAS REDONNER NI IMITER : {', '.join(avoid)}." if avoid else ''}
+    {f'- DIRECTIVE DU CHEF : {directive}' if directive else ''}
+    - INTERDICTION D'INVENTER DES MOTS : vocabulaire culinaire français strict et existant.
+    - Rédige en français, 6 à 9 étapes, quantités pour 1 PERSONNE. N'utilise JAMAIS l'abréviation "u" (écris "pièce"). Unités admises : "g", "mg", "ml", "cl", "c.à.s", "c.à.c", "pincée", "pièce".
+    {chr(10).join("    " + l for l in exclusions_lines(data)).strip()}
+    {profile_reminder(data)}
+
+    Renvoie UNIQUEMENT un objet JSON brut de cette forme, sans texte autour :
+    {VARIANT_JSON_SHAPE}"""
+
+    result = ask_llm_checked(prompt, data, extract=lambda r: [r], parse=sanitize_variant)
+    return json_response({"recipe": result, "course": course}) if result else json_response({"error": "Génération impossible pour le moment."}, 500)
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

@@ -490,3 +490,170 @@ input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer;
 .prefill-save { width: 100%; margin-top: 8px; padding: 8px 12px; background: transparent; border: 1px solid var(--border-glass); border-radius: 10px; color: var(--text-light); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
 .prefill-save:hover { border-color: var(--accent); color: var(--accent); }
 .prefill-save:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ==========================================================================
+   ÉTAPE 2 : menu, planning, liste de courses, illustrations de chargement
+   ========================================================================== */
+:root, :root[data-theme="dark"] { --art-ink: #e2e8f0; --ok: #10b981; }
+:root[data-theme="light"] { --art-ink: #334155; --ok: #059669; }
+body.no-scroll { overflow: hidden; }
+
+.slider-hint { font-weight: 400; color: var(--text-muted); font-size: 0.75rem; }
+.equipment-grid.is-auto { opacity: 0.4; pointer-events: none; }
+.type-auto-note { margin-top: 8px; font-size: 0.75rem; color: var(--text-muted); }
+
+/* --- chargement : illustrations + progression --- */
+.loading-art { width: 100%; max-width: 230px; height: 150px; transition: opacity 0.26s ease; }
+.loading-art.is-swapping { opacity: 0; }
+.loading-art svg { width: 100%; height: 100%; overflow: visible; }
+.loading-art-caption { font-size: 0.8rem; color: var(--text-muted); margin-top: -6px; }
+.loading-progress { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.loading-progress-bar { height: 6px; border-radius: 6px; background: var(--border-glass); overflow: hidden; }
+.loading-progress-fill { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, var(--accent), #ff7eb3); transition: width 0.5s ease; }
+.loading-progress-label { font-size: 0.8rem; color: var(--text-muted); }
+
+.art-hop { animation: art-hop 1.1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.art-h2 { animation-delay: 0.18s; } .art-h3 { animation-delay: 0.36s; }
+@keyframes art-hop { 0%, 100% { transform: translateY(0) rotate(0); } 45% { transform: translateY(-34px) rotate(20deg); } 70% { transform: translateY(-6px) rotate(-8deg); } }
+.art-pan { animation: art-pan 1.1s ease-in-out infinite; transform-box: fill-box; transform-origin: 85% 40%; }
+@keyframes art-pan { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 50% { transform: rotate(2deg); } }
+.art-steam { animation: art-steam 2.2s ease-in-out infinite; }
+@keyframes art-steam { 0%, 100% { transform: translateY(4px); opacity: 0.2; } 50% { transform: translateY(-4px); opacity: 1; } }
+
+.art-knife { animation: art-knife 0.9s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes art-knife { 0%, 100% { transform: translate(-24px, -10px) rotate(-6deg); } 50% { transform: translate(-24px, 10px) rotate(0); } }
+.art-slice { animation: art-slice 0.9s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+.art-s2 { animation-delay: 0.45s; }
+@keyframes art-slice { 0%, 45% { transform: scale(0.6) translateY(4px); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) translateY(0) rotate(8deg); opacity: 1; } }
+
+.art-whisk { animation: art-whisk 0.5s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 50% 0; }
+@keyframes art-whisk { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+.art-egg { animation: art-egg 2s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+@keyframes art-egg { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+.art-drop { animation: art-drop 0.7s ease-in-out infinite; } .art-d2 { animation-delay: 0.3s; }
+@keyframes art-drop { 0%, 100% { transform: translateY(0); opacity: 0.2; } 50% { transform: translateY(-14px); opacity: 1; } }
+
+.art-roll { animation: art-roll 1.6s ease-in-out infinite alternate; }
+@keyframes art-roll { from { transform: translateX(-26px); } to { transform: translateX(26px); } }
+.art-flour { animation: art-steam 2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+    .art-hop, .art-pan, .art-steam, .art-knife, .art-slice, .art-whisk, .art-egg, .art-drop, .art-roll, .art-flour { animation: none; }
+    .art-slice { opacity: 1; }
+}
+
+/* --- onglets des plats d'un menu + retour planning --- */
+.course-tabs-zone { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 850px; margin-bottom: 12px; flex-wrap: wrap; }
+.course-tabs { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; min-width: 0; }
+.course-tab { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--element-bg); color: var(--text-light); cursor: pointer; text-align: left; max-width: 240px; transition: 0.2s; }
+.course-tab:hover { border-color: var(--accent); }
+.course-tab.is-active { border-color: var(--accent); background: rgba(244, 63, 94, 0.1); box-shadow: 0 0 10px var(--accent-glow); }
+.course-tab-name { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
+.course-tab.is-active .course-tab-name { color: var(--accent); }
+.course-tab-title { font-size: 0.85rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 210px; }
+.plan-back-bar { width: 100%; max-width: 850px; margin-bottom: 10px; }
+.var-tab.is-missing { opacity: 0.6; border-style: dashed; }
+.btn-shop { margin-bottom: 0; }
+
+/* --- menu --- */
+.menu-modal { max-width: 640px; max-height: 88vh; }
+.menu-hint { color: var(--text-muted); font-size: 0.85rem; margin-top: -10px; }
+.menu-courses { display: flex; flex-direction: column; gap: 22px; }
+.menu-course-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.menu-course-head h4 { font-size: 1rem; }
+.menu-ideas { display: flex; flex-direction: column; gap: 8px; }
+.menu-idea { text-align: left; width: 100%; font: inherit; color: inherit; }
+.menu-idea.is-picked { border-color: var(--healthy-color); background: rgba(16, 185, 129, 0.1); box-shadow: 0 0 10px rgba(16, 185, 129, 0.25); }
+.menu-idea.is-picked h4::before { content: "✓ "; color: var(--healthy-color); }
+#menu-write-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+/* --- planning --- */
+.planning-page { position: fixed; inset: 0; z-index: 12000; overflow-y: auto; background: var(--bg-main); padding: 20px; }
+.planning-inner { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; padding-bottom: 40px; }
+.planning-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.planning-header h2 { font-size: 1.3rem; }
+.plan-setup { padding: 22px; border-radius: 16px; display: flex; flex-direction: column; gap: 16px; background: var(--card-bg); border: 1px solid var(--border-glass); }
+.plan-options { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; }
+.plan-opt { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+.plan-opt-label { color: var(--text-muted); font-weight: 600; font-size: 0.8rem; }
+.stepper { display: inline-flex; align-items: center; gap: 4px; background: var(--element-bg); border: 1px solid var(--border-glass); border-radius: 10px; padding: 2px; }
+.stepper button { width: 32px; height: 32px; border: none; border-radius: 8px; background: transparent; color: var(--text-light); font-size: 1.1rem; cursor: pointer; }
+.stepper button:hover { background: var(--accent); color: #fff; }
+.stepper span { min-width: 26px; text-align: center; font-weight: 700; }
+.plan-vary { cursor: pointer; }
+.plan-vary input { accent-color: var(--accent); width: 18px; height: 18px; }
+.plan-legend { font-size: 0.8rem; color: var(--text-muted); }
+.plan-grid { display: flex; flex-direction: column; gap: 8px; }
+.plan-row { display: grid; grid-template-columns: 96px 1fr 1fr; gap: 8px; align-items: stretch; }
+.plan-day { display: flex; align-items: center; font-weight: 600; font-size: 0.9rem; }
+.plan-cell { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 8px; border-radius: 10px; border: 1px dashed var(--border-glass); background: var(--input-bg); min-height: 46px; flex-wrap: wrap; }
+.plan-cell.is-on { border-style: solid; border-color: var(--accent); background: rgba(244, 63, 94, 0.08); }
+.plan-slot-btn { border: none; background: transparent; color: var(--text-light); font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 6px 4px; }
+.plan-cell:not(.is-on) .plan-slot-btn { color: var(--text-muted); font-weight: 500; }
+.plan-courses { display: flex; gap: 4px; }
+.plan-course { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border-glass); background: var(--element-bg); cursor: pointer; font-size: 1rem; opacity: 0.45; transition: 0.15s; }
+.plan-course.is-on { opacity: 1; border-color: var(--accent); background: rgba(244, 63, 94, 0.14); }
+.plan-estimate { font-size: 0.78rem; color: var(--fat-color); min-height: 1em; }
+#plan-generate-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+.plan-result-wrap { display: flex; flex-direction: column; gap: 14px; }
+.plan-result-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.plan-summary { color: var(--text-muted); font-size: 0.9rem; }
+.plan-result-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-shop-main { padding: 9px 16px; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #ff7eb3); color: #fff; font-weight: 700; font-size: 0.85rem; cursor: pointer; box-shadow: 0 4px 12px var(--accent-glow); }
+.btn-shop-main:disabled { opacity: 0.5; cursor: not-allowed; }
+.plan-result { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.plan-day-card { background: var(--card-bg); border: 1px solid var(--border-glass); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.plan-day-card h4 { font-size: 0.95rem; }
+.plan-slot-label { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+.plan-meal { display: flex; align-items: stretch; gap: 6px; margin-bottom: 6px; }
+.plan-meal-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; text-align: left; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--element-bg); color: var(--text-light); font: inherit; font-size: 0.85rem; cursor: pointer; transition: 0.15s; }
+.plan-meal-open:hover { border-color: var(--accent); }
+.plan-meal.is-empty .plan-meal-open { border-style: dashed; color: var(--text-muted); }
+.plan-meal-title { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
+.plan-meal-redo { width: 38px; border-radius: 10px; border: 1px solid var(--border-glass); background: var(--element-bg); cursor: pointer; font-size: 0.95rem; }
+.plan-meal-redo:hover { border-color: var(--accent); }
+
+/* --- liste de courses --- */
+.shopping-modal { max-width: 560px; max-height: 88vh; gap: 12px; }
+.shop-subtitle { color: var(--text-muted); font-size: 0.85rem; margin-top: -8px; }
+.shop-count { font-weight: 700; font-size: 1rem; }
+.shop-help { font-size: 0.78rem; color: var(--text-muted); }
+.shop-body { display: flex; flex-direction: column; gap: 14px; }
+.shop-aisle h4 { font-size: 0.85rem; margin-bottom: 6px; color: var(--text-muted); }
+.shop-list { list-style: none; display: flex; flex-direction: column; gap: 4px; padding: 0; }
+.shop-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 8px; background: var(--element-bg); }
+.shop-label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 6px 0; font-size: 0.9rem; }
+.shop-label input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.shop-tick { flex: none; width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--border-glass); display: inline-grid; place-items: center; transition: 0.15s; }
+.shop-label input:checked + .shop-tick { background: var(--ok); border-color: var(--ok); }
+.shop-label input:checked + .shop-tick::after { content: "✓"; color: #fff; font-size: 0.8rem; font-weight: 700; }
+.shop-label input:focus-visible + .shop-tick { outline: 2px solid var(--accent); outline-offset: 2px; }
+.shop-row.is-have .shop-text { text-decoration: line-through; opacity: 0.6; }
+.shop-from { font-size: 0.7rem; color: var(--text-muted); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shop-pin { border: none; background: transparent; cursor: pointer; font-size: 1rem; padding: 4px; opacity: 0.8; }
+.shop-pin:hover { opacity: 1; }
+.shop-have summary, .shop-pantry summary { cursor: pointer; font-weight: 600; font-size: 0.85rem; color: var(--text-muted); padding: 4px 0; }
+.shop-have .shop-list { margin-top: 6px; }
+.shop-pantry { border-top: 1px solid var(--border-glass); padding-top: 10px; }
+.pantry-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.pantry-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; border-radius: 16px; background: var(--element-bg); border: 1px solid var(--border-glass); font-size: 0.8rem; }
+.pantry-chip button { border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; padding: 2px 6px; }
+.pantry-chip button:hover { color: var(--accent); }
+.pantry-none { color: var(--text-muted); font-size: 0.8rem; }
+.pantry-add { display: flex; gap: 8px; }
+.pantry-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.shop-actions { display: flex; gap: 10px; }
+.shop-actions .control-btn { flex: 1; padding: 11px; }
+.shop-empty { color: var(--text-muted); text-align: center; padding: 16px; }
+
+@media (max-width: 640px) {
+    .planning-page { padding: 14px; }
+    .plan-row { grid-template-columns: 1fr 1fr; }
+    .plan-day { grid-column: 1 / -1; padding-top: 6px; }
+    .course-tab-title { max-width: 140px; }
+    .plan-result { grid-template-columns: 1fr; }
+}
+
+.planning-inner > .planning-header { flex-direction: row; align-items: center; justify-content: space-between; text-align: left; margin: 0; padding: 4px 0 0; }
+.planning-header h2 { margin: 0; }
