@@ -158,7 +158,8 @@ const Planning = (() => {
     async function generateMeal(meal) {
         const result = await LG.generateMeal({
             course: meal.course,
-            slot: slotLabel(meal.day, meal.slot),
+            slot: slotLabel(meal.day, meal.slot).replace(/^./, c => c),
+            origin: "plan",
             avoid: allTitles(),
             vary: !!plan.config.vary,
             title: `Le chef prépare : ${slotLabel(meal.day, meal.slot)}…`

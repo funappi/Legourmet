@@ -1087,20 +1087,32 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Petit libellé gris au-dessus du titre : « Plat · Lundi soir » ou « Entrée · menu ». Le titre, lui, reste celui du chef.
+    function kickerText(context) {
+        if (!context?.course || !context.origin) return "";
+        if (context.origin === "menu") return `${context.course} · menu`;
+        return context.slot ? `${context.course} · ${context.slot}` : context.course;
+    }
+
     // --- 10bis. PONT pour les modules Menu / Planning / Courses ---
     const LG = {
         buildPayload, apiRequest, openRecipePack, isValidVariant, Loader, RecipeHistory,
         // Un seul plat généré à la fois (planning, menu) : ménage le quota du plan gratuit.
-        async generateMeal({ course, slot = "", avoid = [], menuTitles = [], vary = true, inspiration = "", title }) {
+        async generateMeal({ course, slot = "", origin = "plan", avoid = [], menuTitles = [], vary = true, inspiration = "", title }) {
             const p = buildPayload(course);
             p.course = course; p.slot = slot; p.vary = vary; p.inspiration = inspiration;
             p.avoid_titles = avoid.slice(-30); p.menu_titles = menuTitles;
             p.chef_instruction_directive = Settings.directivePrefix() + Settings.softPrefsLine(true);
             const data = await apiRequest('generate-meal', p, { step: 0, art: true, title, validate: d => isValidVariant(d?.recipe) });
             if (!data) return null;
-            return { pack: { original: data.recipe }, context: { hardware: window.currentHardware, complex: window.currentComplex, risk: window.currentRisk, course } };
+            return { pack: { original: data.recipe }, context: { hardware: window.currentHardware, complex: window.currentComplex, risk: window.currentRisk, course, slot, origin } };
         },
         setPortions: (n) => { AppState.currentPortions = n; DOM.get("portion-display").innerText = String(n); if (AppState.activeRecipePack) window.renderSelectedVariant(AppState.currentSelectedVariant); },
+        current: () => {
+            const pack = AppState.activeRecipePack;
+            const recipe = pack?.[AppState.currentSelectedVariant];
+            return recipe ? { recipe, portions: AppState.currentPortions, kicker: kickerText(AppState.activeRecipeContext) } : null;
+        },
         busy: () => requestInFlight,
         setBusy: (v) => { requestInFlight = !!v; },
         portions: () => AppState.currentPortions,
@@ -1111,6 +1123,7 @@ document.addEventListener("DOMContentLoaded", () => {
     Menu.init(LG);
     Planning.init(LG);
     Shopping.init();
+    Cooking.init(LG);
 
     // Courses de la recette affichée (ou du menu complet s'il y en a un)
     DOM.get("btn-shop-recipe")?.addEventListener("click", () => {
@@ -1137,6 +1150,9 @@ document.addEventListener("DOMContentLoaded", () => {
         PlateImage.show(data.title);
 
         DOM.get("recipeTitle").innerText = data.title || "Titre inconnu";
+        const kicker = kickerText(AppState.activeRecipeContext);
+        const kickerEl = DOM.get("recipeKicker");
+        if (kickerEl) { kickerEl.textContent = kicker; DOM.toggle(kickerEl, !!kicker); }
         ['p-time', 'c-time', 't-time'].forEach(type => {
             const key = type[0] === 't' ? 'total' : type === 'p-time' ? 'prep' : 'cook';
             DOM.get(type).innerText = data[`${key}_time`] ? `${data[`${key}_time`]} min` : "--";

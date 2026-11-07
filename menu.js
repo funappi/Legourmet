@@ -18,6 +18,7 @@ const Menu = (() => {
         const result = await LG.generateMeal({
             course: item.course,
             slot: "",
+            origin: "menu",
             avoid,
             menuTitles: others.map(titleOf),
             vary: false,
