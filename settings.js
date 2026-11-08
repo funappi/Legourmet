@@ -610,7 +610,13 @@ const Settings = (() => {
         renderAll();
         panelDirty = false;
         document.getElementById("settings-modal-overlay").classList.remove("hidden-mode");
-        if (opts.section === "panel") document.getElementById("panel-editor-wrap")?.scrollIntoView({ block: "start" });
+        if (opts.section === "apikey") {
+            const sec = document.getElementById("api-key-section");
+            sec?.scrollIntoView({ block: "center" });
+            sec?.classList.add("needs-attention");
+            setTimeout(() => sec?.classList.remove("needs-attention"), 3500);
+            document.getElementById("pref-api-key")?.focus();
+        } else if (opts.section === "panel") document.getElementById("panel-editor-wrap")?.scrollIntoView({ block: "start" });
         else document.getElementById("pref-likes-text")?.focus();
     }
     function close() {

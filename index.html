@@ -459,9 +459,9 @@
                 <p class="settings-help">L'IA doit les éviter, le serveur vérifie sa réponse (nouvelle tentative automatique si besoin), puis la recette est contrôlée dans ton navigateur. Cela réduit le risque mais ne le supprime pas : en cas d'allergie, vérifie toujours la recette et les étiquettes.</p>
             </section>
 
-            <section class="settings-section">
+            <section class="settings-section" id="api-key-section">
                 <h4><label for="pref-api-key">🔑 Ma clé API Groq</label></h4>
-                <p class="settings-help">Les recettes sont générées avec ta propre clé, gratuite. Elle reste uniquement sur cet appareil et n'est jamais enregistrée sur le serveur. Laisse vide pour utiliser la clé du site, si elle est disponible.</p>
+                <p class="settings-help">Les recettes sont générées avec ta propre clé, gratuite. Elle est obligatoire pour générer. Elle reste uniquement sur cet appareil : le serveur ne la stocke pas.</p>
                 <div class="api-key-row">
                     <input type="password" id="pref-api-key" class="pref-input" placeholder="gsk_..." autocomplete="off" spellcheck="false" maxlength="200">
                     <button type="button" id="api-key-toggle" class="control-btn" aria-label="Afficher la clé">👁</button>

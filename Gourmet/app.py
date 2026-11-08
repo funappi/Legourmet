@@ -22,15 +22,12 @@ def surface_llm_errors(resp):
     code = g.get("llm_error")
     detail = g.get("llm_detail")
     if resp.status_code >= 500 and (code or detail):
-        msg = {401: "Clé API refusée par Groq.", 429: "Quota Groq atteint."}.get(code, "Génération impossible pour le moment.")
+        msg = {401: "Clé API absente ou refusée par Groq.", 429: "Quota Groq atteint."}.get(code, "Génération impossible pour le moment.")
         return json_response({"error": msg, "detail": detail or ""}, code or resp.status_code)
     return resp
 
-GROQ_KEY = os.getenv("GROQ_API_KEY")
-if not GROQ_KEY:
-    print("[CRITIQUE] GROQ_API_KEY introuvable dans le .env !")
-
-client = Groq(api_key=GROQ_KEY)
+# BYOK : le serveur n'a AUCUNE clé API. Chaque visiteur utilise la sienne (en-tête X-Groq-Key envoyé par le site),
+# donc aucun quota du propriétaire n'est consommé par des inconnus.
 DB_PATH = os.path.join(BASE_DIR, "legourmet.db")
 
 VARIANTS = ("original", "healthy", "protein", "gourmand")
@@ -68,10 +65,13 @@ LLM_EXTRA = {"reasoning_effort": _REASONING} if _REASONING and "gpt-oss" in os.g
 def ask_llm(prompt):
     """Gère l'appel à l'IA de manière centralisée pour éviter le code dupliqué."""
     try:
-        # BYOK : si le navigateur envoie sa propre clé Groq (Préférences), on l'utilise pour cette requête.
+        # BYOK : la clé Groq vient du navigateur (Préférences), jamais du serveur.
         user_key = request.headers.get("X-Groq-Key", "").strip()[:200]
-        llm = Groq(api_key=user_key) if user_key else client
-        completion = llm.chat.completions.create(
+        if not user_key:
+            g.llm_error = 401
+            g.llm_detail = "Aucune clé API reçue."
+            return None
+        completion = Groq(api_key=user_key).chat.completions.create(
             model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
             messages=[
                 {"role": "system", "content": "Tu es un chef cuisinier expert. Tu réponds obligatoirement au format JSON valide."},
