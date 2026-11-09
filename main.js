@@ -559,7 +559,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function describeError(error) {
         if (!navigator.onLine) return "Tu es hors ligne : le chef IA a besoin d'internet pour créer une recette. Tes favoris, ton historique, ton planning et ton mode cuisine restent disponibles.";
         if (error?.name === "AbortError") return "Le serveur met trop de temps à répondre (il se réveille peut-être). Réessaie dans un instant.";
-        if (error?.status === 401) return Settings.apiKey() ? "Groq a refusé ta clé API. Vérifie-la dans Préférences > Ma clé API Groq." : "Le serveur n'a pas de clé API active. Ajoute ta clé gratuite dans Préférences > Ma clé API Groq.";
+        if (error?.status === 401) return Settings.apiKey() ? "Groq a refusé ta clé API. Vérifie-la dans Préférences > Ma clé API Groq." : "Clé API manquante. Ajoute ta clé gratuite dans Préférences > Ma clé API Groq.";
         if (error?.status === 429) return "Quota Groq atteint (trop de demandes, ou limite du jour du plan gratuit). Attends un peu, ou ajoute ta propre clé dans Préférences > Ma clé API Groq." + (error.detail ? ` Détail : ${error.detail}` : "");
         if (error?.status >= 500) return "Le chef IA a eu un contretemps en cuisine (erreur du serveur). Ça passe souvent au deuxième essai." + (error.detail ? ` Détail : ${error.detail}` : "");
         if (error?.status) return `Le serveur a répondu une erreur inattendue (code ${error.status}). Réessaie dans un instant.`;
@@ -602,8 +602,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Sans clé API perso, aucune génération : on ouvre Préférences sur le champ de la clé.
+    function requireApiKey() {
+        Loader.hide();
+        Settings.open({ section: "apikey" });
+    }
+
     // Boucle tant que l'utilisateur clique « Réessayer ». Renvoie les données, ou null (annulé / fermé).
     async function apiRequest(endpoint, payload, options) {
+        if (!Settings.apiKey()) { requireApiKey(); return null; }
         while (true) {
             const result = await attemptRequest(endpoint, payload, options);
             if (result.data !== undefined) { if (!options?.keepLoader) Loader.hide(); return result.data; }
@@ -1160,6 +1167,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let panel = li.querySelector(".ing-suggest-panel");
         if (!panel) { panel = document.createElement("div"); panel.className = "ing-suggest-panel"; li.appendChild(panel); }
         const say = (html) => { panel.innerHTML = html; };
+        if (!Settings.apiKey()) { requireApiKey(); return; }
         if (!navigator.onLine) { say(`<p class="ing-suggest-msg">Tu es hors ligne : la suggestion IA a besoin d'internet.</p>`); return; }
         if (requestInFlight) { say(`<p class="ing-suggest-msg">Une génération est déjà en cours, réessaie dans un instant.</p>`); return; }
         requestInFlight = true;

@@ -1,6 +1,6 @@
 // Service worker : l'application s'ouvre sans réseau (favoris, historique, planning, courses, mode cuisine).
 // Les recettes viennent du serveur IA : elles ne sont jamais mises en cache ici (elles restent dans le navigateur).
-const CACHE = "lg-shell-v2";
+const CACHE = "lg-shell-v3";
 const SHELL = [
   "./", "./index.html", "./style.css", "./manifest.webmanifest",
   "./inventory.js", "./units.js", "./settings.js", "./history.js", "./loader-art.js", "./shopping.js",

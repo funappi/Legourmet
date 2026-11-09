@@ -610,7 +610,14 @@ const Settings = (() => {
         renderAll();
         panelDirty = false;
         document.getElementById("settings-modal-overlay").classList.remove("hidden-mode");
-        if (opts.section === "panel") document.getElementById("panel-editor-wrap")?.scrollIntoView({ block: "start" });
+        document.getElementById("pref-api-key")?.dispatchEvent(new Event("input"));
+        if (opts.section === "apikey") {
+            const sec = document.getElementById("api-key-section");
+            sec?.scrollIntoView({ block: "center" });
+            sec?.classList.add("needs-attention");
+            setTimeout(() => sec?.classList.remove("needs-attention"), 3500);
+            document.getElementById("pref-api-key")?.focus();
+        } else if (opts.section === "panel") document.getElementById("panel-editor-wrap")?.scrollIntoView({ block: "start" });
         else document.getElementById("pref-likes-text")?.focus();
     }
     function close() {
@@ -669,14 +676,42 @@ const Settings = (() => {
     const apiKey = () => { try { return (localStorage.getItem(API_KEY_STORE) || "").trim(); } catch (e) { return ""; } };
     function initApiKey() {
         const input = document.getElementById("pref-api-key");
+        const status = document.getElementById("api-key-status");
         if (!input) return;
+        const mask = (k) => `${k.slice(0, 4)}…${k.slice(-4)}`;
+        const say = (text, kind = "") => { if (status) { status.textContent = text; status.dataset.kind = kind; } };
+        const refresh = () => {
+            const saved = apiKey(), typed = input.value.trim();
+            if (typed && typed !== saved) say("Pas encore enregistrée : clique sur Enregistrer.", "warn");
+            else if (saved) say(`✅ Clé enregistrée sur cet appareil (${mask(saved)}).`, "ok");
+            else say("Aucune clé enregistrée : la génération est désactivée.", "warn");
+        };
+        const save = () => {
+            const k = input.value.trim();
+            try { k ? localStorage.setItem(API_KEY_STORE, k) : localStorage.removeItem(API_KEY_STORE); }
+            catch (e) { say("⚠️ Ton navigateur refuse l'enregistrement (navigation privée ?).", "error"); return false; }
+            refresh();
+            return true;
+        };
         input.value = apiKey();
-        input.addEventListener("input", () => {
-            try { input.value.trim() ? localStorage.setItem(API_KEY_STORE, input.value.trim()) : localStorage.removeItem(API_KEY_STORE); flashStatus("Enregistré ✓"); }
-            catch (e) { flashStatus("⚠️ Impossible d'enregistrer"); }
-        });
+        refresh();
+        input.addEventListener("input", refresh);
+        input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); save(); } });
+        document.getElementById("api-key-save")?.addEventListener("click", save);
         document.getElementById("api-key-toggle")?.addEventListener("click", () => { input.type = input.type === "password" ? "text" : "password"; });
-        document.getElementById("api-key-clear")?.addEventListener("click", () => { input.value = ""; input.dispatchEvent(new Event("input")); });
+        document.getElementById("api-key-clear")?.addEventListener("click", () => { input.value = ""; save(); });
+        document.getElementById("api-key-test")?.addEventListener("click", async () => {
+            const key = input.value.trim();
+            if (!key) { say("Colle d'abord ta clé.", "warn"); return; }
+            if (!save()) return;
+            say("Test en cours…");
+            try {
+                const res = await fetch("https://api.groq.com/openai/v1/models", { headers: { Authorization: `Bearer ${key}` } });
+                if (res.ok) say(`✅ Clé valide et enregistrée (${mask(key)}).`, "ok");
+                else if (res.status === 401) say("❌ Groq refuse cette clé : vérifie qu'elle est complète (elle commence par gsk_).", "error");
+                else say(`Groq répond ${res.status}. Réessaie dans un instant.`, "warn");
+            } catch (e) { say("Test impossible (connexion). La clé est quand même enregistrée.", "warn"); }
+        });
     }
 
     const units = () => data.prefs.units;
