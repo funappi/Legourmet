@@ -1110,14 +1110,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const LG = {
         buildPayload, apiRequest, openRecipePack, isValidVariant, Loader, RecipeHistory,
         // Un seul plat généré à la fois (planning, menu) : ménage le quota du plan gratuit.
-        async generateMeal({ course, slot = "", origin = "plan", avoid = [], menuTitles = [], vary = true, inspiration = "", title }) {
+        async generateMeal({ course, slot = "", origin = "plan", avoid = [], menuTitles = [], vary = true, inspiration = "", dishTitle = "", title }) {
             const p = buildPayload(course);
-            p.course = course; p.slot = slot; p.vary = vary; p.inspiration = inspiration;
+            p.course = course; p.slot = slot; p.vary = vary; p.inspiration = inspiration; p.dish_title = dishTitle;
             p.avoid_titles = avoid.slice(-30); p.menu_titles = menuTitles;
             p.chef_instruction_directive = Settings.directivePrefix() + Settings.softPrefsLine(true);
             const data = await apiRequest('generate-meal', p, { step: 0, art: true, title, validate: d => isValidVariant(d?.recipe) });
             if (!data) return null;
             return { pack: { original: data.recipe }, context: { hardware: window.currentHardware, complex: window.currentComplex, risk: window.currentRisk, course, slot, origin } };
+        },
+        // Planning : UN appel pour les titres de tous les plats. slots = [{ key, label, course }]. Renvoie { key: titre } ou null.
+        async planTitles({ slots, avoid = [], vary = true, title }) {
+            const p = buildPayload();
+            p.slots = slots; p.vary = vary; p.avoid_titles = avoid.slice(-40);
+            p.chef_instruction_directive = Settings.directivePrefix() + Settings.softPrefsLine(true);
+            const data = await apiRequest('generate-plan-titles', p, { step: 0, art: true, title, validate: d => Array.isArray(d?.titles) && d.titles.length > 0 });
+            if (!data) return null;
+            return Object.fromEntries(data.titles.map(t => [t.key, t.title]));
         },
         setPortions: (n) => { AppState.currentPortions = n; DOM.get("portion-display").innerText = String(n); if (AppState.activeRecipePack) window.renderSelectedVariant(AppState.currentSelectedVariant); },
         current: () => {
