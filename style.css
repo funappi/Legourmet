@@ -790,3 +790,5 @@ body.is-offline .app-container { padding-top: 44px; }
 .api-key-status[data-kind="ok"] { color: #10b981; }
 .api-key-status[data-kind="warn"] { color: #f59e0b; }
 .api-key-status[data-kind="error"] { color: #ef4444; }
+.plan-side-meal.is-planned .plan-side-title { color: var(--text-muted); }
+.plan-side-meal.is-planned .plan-reroll { opacity: 1; }

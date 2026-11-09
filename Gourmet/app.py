@@ -593,6 +593,7 @@ def generate_meal():
     time_level = clean(data.get("time", "Amateur"), 30)
     vary = bool(data.get("vary", True))
     inspiration = clean(data.get("inspiration", ""), 200)
+    dish_title = clean(data.get("dish_title", ""), 120)
     directive = clean(data.get("chef_instruction_directive", ""), 900)
     context = (
         f"Tu composes un menu : les autres services sont déjà choisis ({', '.join(menu_titles)}). Ce plat doit s'accorder avec eux sans répéter leur ingrédient principal."
@@ -604,6 +605,7 @@ def generate_meal():
     - Type : {"SUCRÉ" if course == "Dessert" else "SALÉ"}.
     {f'- RÉGIME STRICT : {diet}.' if diet != "Aucun" else ''}
     {'- VARIÉTÉ : change de cuisine, de protéine principale et de technique par rapport aux plats déjà prévus.' if vary and not menu_titles else ''}
+    {f"- PLAT IMPOSÉ : rédige la recette de « {dish_title} ». Le champ \"title\" doit reprendre exactement ce nom." if dish_title else ''}
     {f"- DEMANDE DE L'UTILISATEUR : {inspiration}." if inspiration else ''}
     {f"- À NE PAS REDONNER NI IMITER (déjà prévus ou refusés) : {', '.join(avoid)}." if avoid else ''}
     {f'- DIRECTIVE DU CHEF : {directive}' if directive else ''}
@@ -617,6 +619,61 @@ def generate_meal():
 
     result = ask_llm_checked(prompt, data, extract=lambda r: [r], parse=sanitize_variant)
     return json_response({"recipe": result, "course": course}) if result else json_response({"error": "Génération impossible pour le moment."}, 500)
+
+@app.route('/generate-plan-titles', methods=['POST'])
+def generate_plan_titles():
+    """UN appel : les titres de tous les plats du planning (les recettes se génèrent ensuite au clic, une par une)."""
+    data = request.get_json(silent=True) or {}
+    raw_slots = data.get("slots") if isinstance(data.get("slots"), list) else []
+    slots = []
+    for item in raw_slots[:30]:
+        if isinstance(item, dict) and item.get("course") in ("Entrée", "Plat", "Dessert"):
+            slots.append({"key": clean(item.get("key", ""), 30), "label": clean(item.get("label", ""), 40), "course": item["course"]})
+    if not slots or any(not x["key"] for x in slots):
+        return json_response({"error": "Aucun repas demandé."}, 400)
+    avoid = _clean_list(data.get("avoid_titles"), 60, 90)
+    diet = clean(data.get("diet_profile", "Aucun"), 40)
+    time_level = clean(data.get("time", "Amateur"), 30)
+    vary = bool(data.get("vary", True))
+    directive = clean(data.get("chef_instruction_directive", ""), 900)
+    equipment = data.get("equipment", [])
+    equip_clause = f"Matériel EXCLUSIF : {', '.join(clean(e, 40) for e in equipment[:10])}." if isinstance(equipment, list) and equipment and "Auto_FoodPairing" not in equipment else "Matériel : libre."
+    wanted = "\n".join(f'    - clé "{x["key"]}" : {x["label"]} · {x["course"]}' for x in slots)
+    prompt = f"""Tu es un chef de bistronomie qui compose le planning de repas d'une famille. Donne UN titre de plat pour CHAQUE ligne ci-dessous.
+    LIGNES À REMPLIR :
+{wanted}
+    RÈGLES :
+    - Titres courts et appétissants (60 caractères max), en français, sans description.
+    - "Entrée" = entrée légère ; "Plat" = plat principal complet ; "Dessert" = dessert sucré uniquement. Tout le reste est SALÉ.
+    - Au sein d'un même repas (même libellé), les services s'accordent (menu cohérent) sans répéter l'ingrédient principal.
+    {'- VARIÉTÉ : change de cuisine, de protéine principale et de technique d\'un repas à l\'autre ; aucun doublon sur la semaine.' if vary else ''}
+    - Complexité : {time_level}. {equip_clause}
+    {f'- RÉGIME STRICT : {diet}.' if diet != "Aucun" else ''}
+    {f"- À NE PAS REDONNER NI IMITER : {', '.join(avoid)}." if avoid else ''}
+    {f'- DIRECTIVE DU CHEF : {directive}' if directive else ''}
+    - INTERDICTION D'INVENTER DES MOTS : vocabulaire culinaire français strict et existant.
+    {chr(10).join("    " + l for l in exclusions_lines(data)).strip()}
+    {profile_reminder(data)}
+
+    Renvoie UNIQUEMENT un objet JSON brut : {{"titles": [{{"key": "clé exacte", "title": "Titre du plat"}}]}} avec exactement {len(slots)} entrées."""
+
+    valid_keys = {x["key"] for x in slots}
+
+    def parse(raw):
+        items = raw.get("titles") if isinstance(raw, dict) else None
+        if not isinstance(items, list):
+            raise ValueError("liste de titres manquante")
+        out, seen = [], set()
+        for it in items:
+            if isinstance(it, dict) and it.get("key") in valid_keys and it["key"] not in seen and clean(it.get("title", ""), 90):
+                seen.add(it["key"])
+                out.append({"key": it["key"], "title": clean(it["title"], 90)})
+        if not out:
+            raise ValueError("aucun titre exploitable")
+        return out
+
+    result = ask_llm_checked(prompt, data, extract=lambda r: [{"ingredients": [{"name": t["title"]}], "steps": [t["title"]]} for t in r], parse=parse)
+    return json_response({"titles": result}) if result else json_response({"error": "Titres impossibles pour le moment."}, 500)
 
 @app.route('/suggest-substitute', methods=['POST'])
 def suggest_substitute():

@@ -105,7 +105,7 @@ const Planning = (() => {
     // ---------- liste à droite (panneau « Mon planning ») ----------
     let currentKey = null;
 
-    const titleOf = (m) => m.pack?.original?.title || "";
+    const titleOf = (m) => m.pack?.original?.title || m.title || "";
 
     function renderSide() {
         const side = $("planSide");
@@ -115,7 +115,7 @@ const Planning = (() => {
         document.body.classList.toggle("has-plan-side", has && sideVisible);
         if (!has || !sideVisible) return;
         const done = plan.meals.filter(m => m.pack).length;
-        $("plan-side-summary").textContent = `${done} plat${done > 1 ? "s" : ""} prêt${done > 1 ? "s" : ""} sur ${plan.meals.length} · ${plan.config.persons} pers. Clique un repas pour le générer, 🔄 pour en changer.`;
+        $("plan-side-summary").textContent = `${plan.meals.length} plats planifiés · ${done} recette${done > 1 ? "s" : ""} détaillée${done > 1 ? "s" : ""} · ${plan.config.persons} pers. Clique un plat pour générer sa recette, 🔄 pour en changer.`;
 
         const list = $("plan-side-list");
         list.innerHTML = "";
@@ -125,7 +125,7 @@ const Planning = (() => {
             const h = document.createElement("h4"); h.textContent = DAYS[d]; group.appendChild(h);
             plan.meals.filter(m => m.day === d).sort((a, b) => SLOTS.findIndex(s => s.id === a.slot) - SLOTS.findIndex(s => s.id === b.slot) || COURSES.indexOf(a.course) - COURSES.indexOf(b.course)).forEach(m => {
                 const row = document.createElement("div");
-                row.className = "plan-side-meal" + (m.key === currentKey ? " is-current" : "") + (m.pack ? "" : " is-todo");
+                row.className = "plan-side-meal" + (m.key === currentKey ? " is-current" : "") + (m.pack ? "" : (m.title ? " is-planned" : " is-todo"));
                 const btn = document.createElement("button");
                 btn.type = "button"; btn.className = "plan-side-open";
                 const meta = document.createElement("span"); meta.className = "plan-side-meta";
@@ -137,9 +137,9 @@ const Planning = (() => {
                 const redo = document.createElement("button");
                 redo.type = "button"; redo.className = "plan-reroll";
                 redo.textContent = "🔄";
-                redo.disabled = !m.pack;
-                redo.title = m.pack ? "Je n'aime pas : proposer un autre plat" : "Pas encore généré";
-                redo.setAttribute("aria-label", m.pack ? `Remplacer : ${titleOf(m)}` : `${m.course} pas encore généré`);
+                redo.disabled = !titleOf(m);
+                redo.title = titleOf(m) ? "Je n'aime pas : proposer un autre plat" : "Pas encore planifié";
+                redo.setAttribute("aria-label", titleOf(m) ? `Remplacer : ${titleOf(m)}` : `${m.course} pas encore planifié`);
                 redo.addEventListener("click", () => rerollMeal(m));
                 row.append(btn, redo);
                 group.appendChild(row);
@@ -153,20 +153,23 @@ const Planning = (() => {
     function showSide(on) { sideVisible = on; renderSide(); }
 
     // ---------- génération : UN plat à la fois ----------
-    const allTitles = () => [...plan.meals.filter(m => m.pack).map(titleOf), ...(plan.rejected || [])];
+    const allTitles = () => [...plan.meals.map(titleOf).filter(Boolean), ...(plan.rejected || [])];
+    const slotsOf = (meals) => meals.map(m => ({ key: m.key, label: slotLabel(m.day, m.slot), course: m.course }));
 
     async function generateMeal(meal) {
         const result = await LG.generateMeal({
             course: meal.course,
             slot: slotLabel(meal.day, meal.slot).replace(/^./, c => c),
             origin: "plan",
-            avoid: allTitles(),
+            avoid: allTitles().filter(t => t !== meal.title),
+            dishTitle: meal.title || "",
             vary: !!plan.config.vary,
             title: `Le chef prépare : ${slotLabel(meal.day, meal.slot)}…`
         });
         LG.Loader.hide();
         if (!result) return false;
         meal.pack = result.pack; meal.context = result.context;
+        meal.title = titleOf(meal);
         save();
         return true;
     }
@@ -186,28 +189,50 @@ const Planning = (() => {
         renderSide();
     }
 
-    function startPlan() {
+    // Récupère les titres des plats qui n'en ont pas encore, en UN seul appel. Renvoie false si annulé / en échec.
+    async function fetchTitles(meals, { loaderTitle }) {
+        const todo = meals.filter(m => !m.pack && !m.title);
+        if (!todo.length) return true;
+        const titles = await LG.planTitles({ slots: slotsOf(todo), avoid: allTitles(), vary: !!plan.config.vary, title: loaderTitle });
+        LG.Loader.hide();
+        if (!titles) return false;
+        todo.forEach(m => { if (titles[m.key]) m.title = titles[m.key]; });
+        save();
+        return true;
+    }
+
+    async function startPlan() {
         const wanted = wantedMeals();
         const previous = new Map(plan.meals.map(m => [mealKey(m.day, m.slot, m.course), m]));
         plan.meals = wanted.map(w => ({ key: mealKey(w.day, w.slot, w.course), ...(previous.get(mealKey(w.day, w.slot, w.course)) || { ...w, pack: null }) }));
         save();
         close();
+        LG.setBusy(true);
+        let ok = false;
+        try { ok = await fetchTitles(plan.meals, { loaderTitle: "Le chef compose ton planning…" }); } finally { LG.setBusy(false); }
+        sideVisible = true;
+        renderSide();
+        if (!ok) return;
         const first = plan.meals.find(m => !m.pack) || plan.meals[0];
         openMeal(first);
     }
 
-    // « Je n'aime pas » : le plat est remplacé tout de suite (1 appel) et son titre n'est plus reproposé
+    // « Je n'aime pas » : un nouveau TITRE est proposé tout de suite (1 appel léger) ; la recette se génère au clic
     async function rerollMeal(meal) {
-        if (LG.busy() || !meal.pack) return;
-        const oldPack = meal.pack, oldContext = meal.context, oldTitle = titleOf(meal);
+        if (LG.busy() || !titleOf(meal)) return;
+        const old = { pack: meal.pack, context: meal.context, title: meal.title };
+        const oldTitle = titleOf(meal);
         plan.rejected = [...new Set([...(plan.rejected || []), oldTitle])].slice(-40);
-        meal.pack = null; meal.context = null;
+        meal.pack = null; meal.context = null; meal.title = "";
         LG.setBusy(true);
         let ok = false;
-        try { ok = await generateMeal(meal); } finally { LG.setBusy(false); }
-        if (!ok) { meal.pack = oldPack; meal.context = oldContext; plan.rejected = plan.rejected.filter(t => t !== oldTitle); renderSide(); return; }
+        try { ok = await fetchTitles([meal], { loaderTitle: `Un autre plat pour ${slotLabel(meal.day, meal.slot)}…` }); } finally { LG.setBusy(false); }
+        if (!ok || !meal.title) {
+            Object.assign(meal, old);
+            plan.rejected = plan.rejected.filter(t => t !== oldTitle);
+        }
         save();
-        openMeal(meal);
+        renderSide();
     }
 
     function shoppingRecipes() {
