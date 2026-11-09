@@ -784,3 +784,9 @@ body.is-offline .app-container { padding-top: 44px; }
 .settings-section.needs-attention { animation: key-pulse 1.2s ease-out 2; border-radius: 12px; }
 @keyframes key-pulse { 0% { box-shadow: 0 0 0 0 var(--accent-glow); } 70% { box-shadow: 0 0 0 10px transparent; } 100% { box-shadow: none; } }
 @media (prefers-reduced-motion: reduce) { .settings-section.needs-attention { animation: none; outline: 2px solid var(--accent); } }
+.api-key-row + .api-key-row { margin-top: 8px; }
+.api-key-save { border-color: var(--accent); color: var(--accent); }
+.api-key-status { font-size: 0.85rem; margin: 8px 0 4px; min-height: 1.2em; color: var(--text-muted); }
+.api-key-status[data-kind="ok"] { color: #10b981; }
+.api-key-status[data-kind="warn"] { color: #f59e0b; }
+.api-key-status[data-kind="error"] { color: #ef4444; }

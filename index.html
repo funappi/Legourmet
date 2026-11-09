@@ -465,8 +465,13 @@
                 <div class="api-key-row">
                     <input type="password" id="pref-api-key" class="pref-input" placeholder="gsk_..." autocomplete="off" spellcheck="false" maxlength="200">
                     <button type="button" id="api-key-toggle" class="control-btn" aria-label="Afficher la clé">👁</button>
+                </div>
+                <div class="api-key-row">
+                    <button type="button" id="api-key-save" class="control-btn api-key-save">💾 Enregistrer</button>
+                    <button type="button" id="api-key-test" class="control-btn">Tester</button>
                     <button type="button" id="api-key-clear" class="control-btn">Effacer</button>
                 </div>
+                <p id="api-key-status" class="api-key-status" role="status" aria-live="polite"></p>
                 <p class="settings-help"><a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">Obtenir une clé gratuite sur Groq ↗</a> (compte gratuit, 1 minute)</p>
             </section>
 
