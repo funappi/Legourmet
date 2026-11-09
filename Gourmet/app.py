@@ -595,6 +595,7 @@ def generate_meal():
     inspiration = clean(data.get("inspiration", ""), 200)
     dish_title = clean(data.get("dish_title", ""), 120)
     directive = clean(data.get("chef_instruction_directive", ""), 900)
+    imposed_clause = f"- PLAT IMPOSÉ : rédige la recette de « {dish_title} ». Le champ title doit reprendre exactement ce nom." if dish_title else ""
     context = (
         f"Tu composes un menu : les autres services sont déjà choisis ({', '.join(menu_titles)}). Ce plat doit s'accorder avec eux sans répéter leur ingrédient principal."
         if menu_titles else f"Tu prépares le planning de la semaine d'une famille. Repas concerné : {slot or 'un repas'}."
@@ -605,7 +606,7 @@ def generate_meal():
     - Type : {"SUCRÉ" if course == "Dessert" else "SALÉ"}.
     {f'- RÉGIME STRICT : {diet}.' if diet != "Aucun" else ''}
     {'- VARIÉTÉ : change de cuisine, de protéine principale et de technique par rapport aux plats déjà prévus.' if vary and not menu_titles else ''}
-    {f"- PLAT IMPOSÉ : rédige la recette de « {dish_title} ». Le champ \"title\" doit reprendre exactement ce nom." if dish_title else ''}
+    {imposed_clause}
     {f"- DEMANDE DE L'UTILISATEUR : {inspiration}." if inspiration else ''}
     {f"- À NE PAS REDONNER NI IMITER (déjà prévus ou refusés) : {', '.join(avoid)}." if avoid else ''}
     {f'- DIRECTIVE DU CHEF : {directive}' if directive else ''}
@@ -638,6 +639,7 @@ def generate_plan_titles():
     directive = clean(data.get("chef_instruction_directive", ""), 900)
     equipment = data.get("equipment", [])
     equip_clause = f"Matériel EXCLUSIF : {', '.join(clean(e, 40) for e in equipment[:10])}." if isinstance(equipment, list) and equipment and "Auto_FoodPairing" not in equipment else "Matériel : libre."
+    vary_clause = "- VARIÉTÉ : change de cuisine, de protéine principale et de technique d'un repas à l'autre ; aucun doublon sur la semaine." if vary else ""
     wanted = "\n".join(f'    - clé "{x["key"]}" : {x["label"]} · {x["course"]}' for x in slots)
     prompt = f"""Tu es un chef de bistronomie qui compose le planning de repas d'une famille. Donne UN titre de plat pour CHAQUE ligne ci-dessous.
     LIGNES À REMPLIR :
@@ -646,7 +648,7 @@ def generate_plan_titles():
     - Titres courts et appétissants (60 caractères max), en français, sans description.
     - "Entrée" = entrée légère ; "Plat" = plat principal complet ; "Dessert" = dessert sucré uniquement. Tout le reste est SALÉ.
     - Au sein d'un même repas (même libellé), les services s'accordent (menu cohérent) sans répéter l'ingrédient principal.
-    {'- VARIÉTÉ : change de cuisine, de protéine principale et de technique d\'un repas à l\'autre ; aucun doublon sur la semaine.' if vary else ''}
+    {vary_clause}
     - Complexité : {time_level}. {equip_clause}
     {f'- RÉGIME STRICT : {diet}.' if diet != "Aucun" else ''}
     {f"- À NE PAS REDONNER NI IMITER : {', '.join(avoid)}." if avoid else ''}
