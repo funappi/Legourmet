@@ -792,3 +792,11 @@ body.is-offline .app-container { padding-top: 44px; }
 .api-key-status[data-kind="error"] { color: #ef4444; }
 .plan-side-meal.is-planned .plan-side-title { color: var(--text-muted); }
 .plan-side-meal.is-planned .plan-reroll { opacity: 1; }
+
+/* Remplacement multiple : 🔄 devient une case à cocher */
+.plan-reroll.is-marked { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.plan-side-meal.is-marked .plan-side-open { border-color: var(--accent); text-decoration: line-through; text-decoration-color: rgba(244, 63, 94, 0.6); }
+.plan-reroll-bar { display: flex; gap: 8px; margin-bottom: 8px; }
+.plan-reroll-all { flex: 1; padding: 10px 12px; border-radius: 12px; border: none; background: var(--accent); color: #fff; font: inherit; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+.plan-reroll-all:disabled { opacity: 0.5; cursor: wait; }
+.plan-reroll-bar.hidden-mode { display: none; }

@@ -104,6 +104,7 @@ const Planning = (() => {
 
     // ---------- liste à droite (panneau « Mon planning ») ----------
     let currentKey = null;
+    const marked = new Set();   // plats cochés pour remplacement (non sauvegardé)
 
     const titleOf = (m) => m.pack?.original?.title || m.title || "";
 
@@ -115,7 +116,7 @@ const Planning = (() => {
         document.body.classList.toggle("has-plan-side", has && sideVisible);
         if (!has || !sideVisible) return;
         const done = plan.meals.filter(m => m.pack).length;
-        $("plan-side-summary").textContent = `${plan.meals.length} plats planifiés · ${done} recette${done > 1 ? "s" : ""} détaillée${done > 1 ? "s" : ""} · ${plan.config.persons} pers. Clique un plat pour générer sa recette, 🔄 pour en changer.`;
+        $("plan-side-summary").textContent = `${plan.meals.length} plats planifiés · ${done} recette${done > 1 ? "s" : ""} détaillée${done > 1 ? "s" : ""} · ${plan.config.persons} pers. Clique un plat pour générer sa recette. Coche 🔄 les plats à changer.`;
 
         const list = $("plan-side-list");
         list.innerHTML = "";
@@ -138,15 +139,22 @@ const Planning = (() => {
                 redo.type = "button"; redo.className = "plan-reroll";
                 redo.textContent = "🔄";
                 redo.disabled = !titleOf(m);
-                redo.title = titleOf(m) ? "Je n'aime pas : proposer un autre plat" : "Pas encore planifié";
-                redo.setAttribute("aria-label", titleOf(m) ? `Remplacer : ${titleOf(m)}` : `${m.course} pas encore planifié`);
-                redo.addEventListener("click", () => rerollMeal(m));
+                const on = marked.has(m.key);
+                redo.classList.toggle("is-marked", on);
+                row.classList.toggle("is-marked", on);
+                redo.setAttribute("aria-pressed", String(on));
+                redo.title = on ? "Coché : sera remplacé (clique pour décocher)" : "Je n'aime pas : cocher pour remplacer";
+                redo.setAttribute("aria-label", `${on ? "Décocher" : "Cocher pour remplacer"} : ${titleOf(m)}`);
+                redo.addEventListener("click", () => { on ? marked.delete(m.key) : marked.add(m.key); renderSide(); });
                 row.append(btn, redo);
                 group.appendChild(row);
             });
             list.appendChild(group);
         });
         $("plan-shopping-btn").disabled = done === 0;
+        const n = [...marked].filter(k => plan.meals.some(m => m.key === k)).length;
+        $("plan-reroll-bar").classList.toggle("hidden-mode", n === 0);
+        $("plan-reroll-btn").textContent = `🔄 Remplacer ${n} plat${n > 1 ? "s" : ""} coché${n > 1 ? "s" : ""}`;
     }
 
     let sideVisible = false;
@@ -201,36 +209,39 @@ const Planning = (() => {
         return true;
     }
 
+    // « Générer » = UNIQUEMENT les titres (1 appel). Les recettes se génèrent au clic sur un plat.
     async function startPlan() {
         const wanted = wantedMeals();
         const previous = new Map(plan.meals.map(m => [mealKey(m.day, m.slot, m.course), m]));
         plan.meals = wanted.map(w => ({ key: mealKey(w.day, w.slot, w.course), ...(previous.get(mealKey(w.day, w.slot, w.course)) || { ...w, pack: null }) }));
+        marked.clear();
         save();
         close();
         LG.setBusy(true);
-        let ok = false;
-        try { ok = await fetchTitles(plan.meals, { loaderTitle: "Le chef compose ton planning…" }); } finally { LG.setBusy(false); }
+        try { await fetchTitles(plan.meals, { loaderTitle: "Le chef compose ton planning…" }); } finally { LG.setBusy(false); }
         sideVisible = true;
         renderSide();
-        if (!ok) return;
-        const first = plan.meals.find(m => !m.pack) || plan.meals[0];
-        openMeal(first);
+        $("planSide")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
-    // « Je n'aime pas » : un nouveau TITRE est proposé tout de suite (1 appel léger) ; la recette se génère au clic
-    async function rerollMeal(meal) {
-        if (LG.busy() || !titleOf(meal)) return;
-        const old = { pack: meal.pack, context: meal.context, title: meal.title };
-        const oldTitle = titleOf(meal);
-        plan.rejected = [...new Set([...(plan.rejected || []), oldTitle])].slice(-40);
-        meal.pack = null; meal.context = null; meal.title = "";
+    // Remplace d'un coup tous les plats cochés : UN seul appel pour les nouveaux titres
+    async function rerollMarked() {
+        if (LG.busy()) return;
+        const meals = plan.meals.filter(m => marked.has(m.key) && titleOf(m));
+        if (!meals.length) return;
+        const backup = meals.map(m => ({ m, pack: m.pack, context: m.context, title: m.title }));
+        const oldTitles = meals.map(titleOf);
+        plan.rejected = [...new Set([...(plan.rejected || []), ...oldTitles])].slice(-60);
+        meals.forEach(m => { m.pack = null; m.context = null; m.title = ""; });
         LG.setBusy(true);
         let ok = false;
-        try { ok = await fetchTitles([meal], { loaderTitle: `Un autre plat pour ${slotLabel(meal.day, meal.slot)}…` }); } finally { LG.setBusy(false); }
-        if (!ok || !meal.title) {
-            Object.assign(meal, old);
-            plan.rejected = plan.rejected.filter(t => t !== oldTitle);
-        }
+        try { ok = await fetchTitles(meals, { loaderTitle: `Le chef remplace ${meals.length} plat${meals.length > 1 ? "s" : ""}…` }); } finally { LG.setBusy(false); }
+        // En cas d'échec (ou de titre manquant), on remet l'ancien plat
+        backup.forEach(({ m, pack, context, title }) => {
+            if (!ok || !m.title) { Object.assign(m, { pack, context, title }); }
+            else marked.delete(m.key);
+        });
+        if (!ok) plan.rejected = plan.rejected.filter(t => !oldTitles.includes(t));
         save();
         renderSide();
     }
@@ -280,9 +291,11 @@ const Planning = (() => {
             openMeal(target);
         });
         $("plan-edit-btn")?.addEventListener("click", open);
+        $("plan-reroll-btn")?.addEventListener("click", rerollMarked);
+        $("plan-unmark-btn")?.addEventListener("click", () => { marked.clear(); renderSide(); });
         $("plan-clear-btn")?.addEventListener("click", () => {
             if (!confirm("Effacer ce planning et recommencer ?")) return;
-            plan.meals = []; plan.rejected = []; currentKey = null; save(); showSide(false);
+            plan.meals = []; plan.rejected = []; currentKey = null; marked.clear(); save(); showSide(false);
             $("plan-resume").classList.add("hidden-mode");
         });
         $("plan-shopping-btn")?.addEventListener("click", () => {
