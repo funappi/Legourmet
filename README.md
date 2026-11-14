@@ -17,17 +17,31 @@
 
 </div>
 
+<p align="center">
+  <a href="https://funappi.github.io/Legourmet/"><b>Ouvrir l'application</b></a>
+</p>
+
+<p align="center">
+  <img src="docs/apercu.png" alt="Accueil du Gourmet en thème sombre : réglages à gauche, idées de plats au centre" width="900">
+</p>
+
+<p align="center">
+  <img src="docs/planning.png" alt="Planning de la semaine" width="440">
+  <img src="docs/clair.png" alt="Thème clair" width="440">
+</p>
+
 ---
 
 ## 📖 Sommaire
 
 - [À propos du projet](#-à-propos-du-projet)
 - [Fonctionnalités clés](#-fonctionnalités-clés)
-- [Architecture & Pipeline IA](#-architecture--pipeline-ia)
+- [Menu, planning & liste de courses](#️-menu-planning--liste-de-courses)
+- [Architecture & Pipeline IA](#️-architecture--pipeline-ia)
 - [Structure du Projet](#-structure-du-projet)
 - [Documentation de l'API REST](#-documentation-de-lapi-rest)
 - [Installation & Lancement Local](#-installation--lancement-local)
-- [Déploiement & CI/CD (GitHub Actions)](#-déploiement--cicd-github-actions)
+- [Déploiement & CI/CD (GitHub Actions)](#️-déploiement--cicd-github-actions)
 - [Design System & Thèmes](#-design-system--thèmes)
 
 ---
@@ -74,6 +88,16 @@ Contrairement aux générateurs de recettes génériques :
 * **Préférences** (bouton en haut à droite) : deux zones de texte libres, **« Mes préférences »** et **« Ce que je n'aime pas ou allergies »**, mémorisées dans le `localStorage` et lues telles quelles par l'IA ; l'appli en déduit aussi une liste d'éléments à contrôler (allergènes de l'UE reconnus). Réglages par défaut repliables (personnes, équipement, régime, épices, cuisines). Une section **« PROFIL UTILISATEUR »** est ajoutée au prompt système (plus un rappel final) ; le serveur **vérifie** ensuite la réponse du LLM et redemande une fois si un élément interdit s'y trouve, donc la recette de base les évite d'emblée. En dernier recours, le navigateur surligne l'ingrédient fautif et propose « Corriger avec l'IA ». Cela réduit le risque mais ne le supprime pas.
 * **Historique** : les 20 dernières recettes générées (réouverture en un clic, suppression, vidage), tenues à jour après chaque ajustement.
 * **Ajuster en une phrase** (« sans four », « moins épicé », « pour 4 avec ce qu'il me manque ») avec bouton *Revenir*, et **Régénérer cette version** sans toucher aux 3 autres.
+
+---
+
+## 🗓️ Menu, planning & liste de courses
+
+Un seul plat est généré à la fois (ménage le quota du plan gratuit de Groq).
+- **Menu** : coche 2 ou 3 services (Entrée / Plat / Dessert). Le premier plat s'affiche, puis « Plat suivant » génère le suivant. « Autre plat » en propose un autre pour le service affiché.
+- **Planning** (bouton « Planning » en haut) : jours, midi/soir, services, personnes, variété. Le premier repas est généré ; les autres, listés à droite, se génèrent au clic. Case « je n'aime pas » + « Remplacer la sélection » : les plats cochés sont vidés et jamais reproposés.
+- **Liste de courses** : ingrédients fusionnés par rayon, « j'ai déjà », garde-manger mémorisé (`lg_pantry`), copier / partager.
+- **Backend** : route `POST /generate-meal` (un plat) dans `Gourmet/app.py` ; recoller le fichier sur PythonAnywhere puis Reload.
 
 ---
 
@@ -186,12 +210,3 @@ Secrets GitHub requis : `PA_USER`, `PA_DOMAIN`, `PA_API_TOKEN`. Le workflow ne m
 Ce projet est distribué sous la licence [PolyForm Noncommercial 1.0.0](LICENSE) : utilisation, modification et partage libres pour tout **usage non commercial**.
 
 **Usage commercial : contacte-moi pour une licence séparée** — [Funappi](https://github.com/funappi).
-
-
-
-## Étape 2 : menu, planning, liste de courses
-Un seul plat est généré à la fois (ménage le quota du plan gratuit de Groq).
-- **Menu** : coche 2 ou 3 services (Entrée / Plat / Dessert). Le premier plat s'affiche, puis « Plat suivant » génère le suivant. « Autre plat » en propose un autre pour le service affiché.
-- **Planning** (bouton « Planning » en haut) : jours, midi/soir, services, personnes, variété. Le premier repas est généré ; les autres, listés à droite, se génèrent au clic. Case « je n'aime pas » + « Remplacer la sélection » : les plats cochés sont vidés et jamais reproposés.
-- **Liste de courses** : ingrédients fusionnés par rayon, « j'ai déjà », garde-manger mémorisé (`lg_pantry`), copier / partager.
-- **Backend** : route `POST /generate-meal` (un plat) dans `Gourmet/app.py` ; recoller le fichier sur PythonAnywhere puis Reload.
